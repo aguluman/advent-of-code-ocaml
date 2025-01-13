@@ -1,0 +1,29 @@
+# OCaml specific
+*.annot
+*.cmo
+*.cma
+*.cmi
+*.cmx
+*.cmxa
+*.o
+*.a
+
+# Build directory
+_build/
+
+# Dune generated files
+*.install
+*.merlin
+
+# opam local switch
+_opam/
+
+# Editor specific
+.vscode/
+*~
+\#*#
+.#*
+
+# System specific
+.DS_Store
+Thumbs.db
