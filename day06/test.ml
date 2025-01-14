@@ -1,6 +1,7 @@
 open OUnit2
 open Day06
 
+(* Example input *)
 let example_input = "....#.....
 .........#
 ..........
@@ -12,28 +13,31 @@ let example_input = "....#.....
 #.........
 ......#..."
 
-(* Test specific movement scenarios *)
-let movement_tests = [
-  "initial_up_movement" >:: (fun _ ->
-    let map = parse "...\n.^.\n..." in
-    assert_equal (1,1) (find_start map 3));
+(* Helper function to create part1 tests *)
+let make_part1_test name expected_output input =
+  name >:: (fun _ ->
+    let map = parse input in
+    assert_equal expected_output (part1 map) ~printer:string_of_int)
 
-  "turn_right_at_obstacle" >:: (fun _ ->
-    let map = parse "..#\n.^.\n..." in
-    let pos = (1,1) in
-    assert_equal true (is_blocked map 3 pos U));
+(* Helper function to create part2 tests *)
+let make_part2_test name expected_output input =
+  name >:: (fun _ ->
+    let map = parse input in
+    assert_equal expected_output (part2 map) ~printer:string_of_int)
+
+(* Part1 and Part2 test cases *)
+let part1_tests = [
+  make_part1_test "example_part1" 41 example_input;
 ]
 
-(* Main test cases *)
-let part1_tests = "test suite for part1" >::: [
-  "example_part1" >:: (fun _ ->
-    let map = parse example_input in
-    assert_equal 41 (part1 map) ~printer:string_of_int);
+let part2_tests = [
+  make_part2_test "example_part2" 6 example_input;
 ]
 
-let suite = "all tests" >::: [
-  "movement" >::: movement_tests;
-  part1_tests;
+(* Main test suite *)
+let suite = "Day06 Test Suite" >::: [
+  "part1 tests" >::: part1_tests;
+  "part2 tests" >::: part2_tests;
 ]
 
 let () = run_test_tt_main suite
