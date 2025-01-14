@@ -1,5 +1,4 @@
 open Stdio
-open Domainslib
 
 type direction = 
   | Up
@@ -60,8 +59,8 @@ let part2 map =
     let history = Hashtbl.create 100 in
     let stack = Queue.create () in
     Queue.add (i, j, dir) stack;
-    let rec loop () =
-      if Queue.is_empty stack then false
+    let rec loop found_loop =
+      if found_loop || Queue.is_empty stack then found_loop
       else
         let (i, j, dir) = Queue.take stack in
         let next_pos = match dir with
@@ -79,43 +78,33 @@ let part2 map =
               (ni, nj, dir)
           in
           if Hashtbl.mem history (ni, nj, nd) then
-            true
+            loop true
           else begin
             Hashtbl.add history (ni, nj, nd) ();
             Queue.add (ni, nj, nd) stack;
-            loop ()
+            loop false
           end
-        | None -> loop ()
+        | None -> loop false
     in
-    loop ()
+    loop false
   in
 
   let si, sj =
-    List.init n (fun i -> List.init n (fun j -> (i, j)))
-    |> List.concat
-    |> List.find (fun (i, j) -> map.(i).(j) = '^')
+    List.find (fun (i, j) -> map.(i).(j) = '^')
+      (List.concat (List.init n (fun i -> List.init n (fun j -> (i, j)))))
   in
-
-  let pool = (Task.setup_pool ~num_domains:(Domain.recommended_domain_count()))() in
-  let results =
-    Task.parallel_for_reduce pool ~chunk_size:1 ~start:0 ~finish:(n * n - 1)
-      ~body:(fun idx ->
-        let i = idx / n in
-        let j = idx mod n in
-        if map.(i).(j) = '.' then
-          let row = Array.copy map.(i) in
-          row.(j) <- '#';
-          let new_map = Array.copy map in
-          new_map.(i) <- row;
-          if find_loop new_map (si, sj) Up then 1 else 0
-        else
-          0)
-      (+)  (* Use built-in addition as reducer *)
-      0    (* Start with 0 as initial value *)
-  in
-  Task.teardown_pool pool;
-  results
-
+  List.length (
+    List.filter (fun (i, j) ->
+      if map.(i).(j) = '.' then
+        let row = Array.copy map.(i) in
+        row.(j) <- '#';
+        let new_map = Array.copy map in
+        new_map.(i) <- row;
+        find_loop new_map (si, sj) Up
+      else
+        false
+    ) (List.concat (List.init n (fun i -> List.init n (fun j -> (i, j)))))
+  )
 
 let parse input =
   input
