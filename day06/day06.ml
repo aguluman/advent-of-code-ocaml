@@ -1,11 +1,17 @@
+(** Solution for Day 6 of Advent of Code.
+    Implements path finding in a 2D grid with directional movement. *)
+
 open Stdio
 
+(** Direction represents possible movements in the grid. *)
 type direction = 
-  | Up
-  | Right
-  | Down
-  | Left
+  | Up    (** Move upward *)
+  | Right (** Move rightward *)
+  | Down  (** Move downward *)
+  | Left  (** Move leftward *)
 
+
+(** [next_direction dir] returns the next direction in clockwise rotation. *)
 let next_direction = function
   | Up -> Right
   | Right -> Down
@@ -19,6 +25,8 @@ let part1 map =
     failwith "Invalid map: not all rows have the same length";
 
   let forward (i, j) dir history =
+      (**[forward (i,j) dir history] computes next position and updates history.
+      Returns (new_i, new_j, new_dir, new_history) *)
     let next_pos = match dir with
       | Up -> if i >= 1 then Some (i - 1, j) else None
       | Right -> if j < n - 1 then Some (i, j + 1) else None
@@ -29,8 +37,10 @@ let part1 map =
     | Some (ni, nj) ->
       let ni, nj, nd, nh =
         if map.(ni).(nj) = '#' then
+          (* Hit wall - stay in place but rotate *)
           (i, j, next_direction dir, history)
         else
+          (* Move to new position *)
           (ni, nj, dir, (ni, nj) :: history)
       in
       (ni, nj, nd, nh)
@@ -38,6 +48,8 @@ let part1 map =
   in
 
   let rec loop (i, j, dir, history) =
+    (**[loop (i,j,dir,history)] follows path until cycle is detected.
+        Returns number of unique positions visited*)
     let (ni, nj, nd, nh) = forward (i, j) dir history in
     if (ni, nj) = (i, j) && dir = nd then
       List.length (List.sort_uniq compare history)
@@ -45,6 +57,7 @@ let part1 map =
       loop (ni, nj, nd, nh)
   in
 
+  (* Find starting position marked with '^' *)
   let si, sj =
     List.find (fun (i, j) -> map.(i).(j) = '^')
       (List.concat (List.init n (fun i -> List.init n (fun j -> (i, j)))))
@@ -56,6 +69,8 @@ let part2 map =
   Array.iter (fun row -> if Array.length row <> n then failwith "Invalid map: not all rows have the same length") map;
 
   let find_loop map (i, j) dir =
+    (**[find_loop map (i,j) dir] checks if blocking position creates loop.
+        Returns true if loop is formed*)
     let history = Hashtbl.create 100 in
     let stack = Queue.create () in
     Queue.add (i, j, dir) stack;
@@ -89,10 +104,13 @@ let part2 map =
     loop false
   in
 
+  (* Find starting position marked with '^' *)
   let si, sj =
     List.find (fun (i, j) -> map.(i).(j) = '^')
       (List.concat (List.init n (fun i -> List.init n (fun j -> (i, j)))))
   in
+  
+  (* Count positions that create loops when blocked *)
   List.length (
     List.filter (fun (i, j) ->
       if map.(i).(j) = '.' then
@@ -106,6 +124,7 @@ let part2 map =
     ) (List.concat (List.init n (fun i -> List.init n (fun j -> (i, j)))))
   )
 
+(** [parse input] converts input string to 2D grid *)
 let parse input =
   input
   |> String.split_on_char '\n'
@@ -113,6 +132,7 @@ let parse input =
   |> List.map (fun row -> Array.of_list (List.init (String.length row) (String.get row)))
   |> Array.of_list
 
+(** Main entry point *)
 let () =
   let input = In_channel.input_all In_channel.stdin |> parse in
 
