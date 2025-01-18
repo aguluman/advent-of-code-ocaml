@@ -23,6 +23,8 @@ let part1 map =
     failwith "Invalid map: not all rows have the same length";
 
   let forward (i, j) dir history =
+    (* [forward (i,j) dir history] computes next position and updates history.
+      Returns (new_i, new_j, new_dir, new_history) *)
     let next_pos = match dir with
       | Up -> if i >= 1 then Some (i - 1, j) else None
       | Right -> if j < n - 1 then Some (i, j + 1) else None
@@ -46,9 +48,13 @@ let part1 map =
 
   
   let rec loop (i, j, dir, history) =
+    (* [loop (i,j,dir,history)] follows path until cycle is detected.
+        Returns number of unique positions visited*)
      let (ni, nj, nd, nh) = forward (i, j) dir history in
+
     (* Check if we're stuck (same position and direction) *)
     if (ni, nj) = (i, j) && dir = nd then
+
       (* Count unique positions *)
       history |> List.sort_uniq compare |> List.length
     else
@@ -69,6 +75,8 @@ let part2 map =
     failwith "Invalid map: not all rows have the same length") map;
 
   let find_loop map (i, j) dir =
+    (* [find_loop map (i,j) dir] checks if blocking position creates loop.
+        Returns true if loop is formed*)
     let history = Hashtbl.create 100 in
     let stack = Queue.create () in
     Queue.add (i, j, dir) stack;
