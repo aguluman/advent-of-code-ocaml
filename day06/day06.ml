@@ -23,8 +23,6 @@ let part1 map =
     failwith "Invalid map: not all rows have the same length";
 
   let forward (i, j) dir history =
-      (**[forward (i,j) dir history] computes next position and updates history.
-      Returns (new_i, new_j, new_dir, new_history) *)
     let next_pos = match dir with
       | Up -> if i >= 1 then Some (i - 1, j) else None
       | Right -> if j < n - 1 then Some (i, j + 1) else None
@@ -46,10 +44,9 @@ let part1 map =
     | None -> (i, j, dir, history) (* Out of bounds: stay put *)
   in
 
+  
   let rec loop (i, j, dir, history) =
-    (**[loop (i,j,dir,history)] follows path until cycle is detected.
-        Returns number of unique positions visited*)
-    let (ni, nj, nd, nh) = forward (i, j) dir history in
+     let (ni, nj, nd, nh) = forward (i, j) dir history in
     (* Check if we're stuck (same position and direction) *)
     if (ni, nj) = (i, j) && dir = nd then
       (* Count unique positions *)
@@ -72,11 +69,10 @@ let part2 map =
     failwith "Invalid map: not all rows have the same length") map;
 
   let find_loop map (i, j) dir =
-    (**[find_loop map (i,j) dir] checks if blocking position creates loop.
-        Returns true if loop is formed*)
     let history = Hashtbl.create 100 in
     let stack = Queue.create () in
     Queue.add (i, j, dir) stack;
+
     let rec loop found_loop =
       if found_loop || Queue.is_empty stack then found_loop
       else
@@ -107,25 +103,30 @@ let part2 map =
     loop false
   in
 
-  (* Find starting position marked with '^' *)
   let si, sj =
     List.find (fun (i, j) -> map.(i).(j) = '^')
-      (List.concat (List.init n (fun i -> List.init n (fun j -> (i, j)))))
+      (List.init n (fun i -> List.init n (fun j -> (i, j))) |> List.concat)
   in
-  
-  (* Count positions that create loops when blocked *)
-  List.length (
-    List.filter (fun (i, j) ->
+
+  (* Parallel processing to count positions that create loops *)
+  let tasks = 
+    List.init n (fun i -> List.init n (fun j -> (i, j)))
+    |> List.concat
+    |> List.filter_map (fun (i, j) ->
       if map.(i).(j) = '.' then
         let row = Array.copy map.(i) in
         row.(j) <- '#';
         let new_map = Array.copy map in
         new_map.(i) <- row;
-        find_loop new_map (si, sj) Up
+        Some (Domain.spawn (fun () -> if find_loop new_map (si, sj) Up then 1 else 0))
       else
-        false
-    ) (List.concat (List.init n (fun i -> List.init n (fun j -> (i, j)))))
-  )
+        None
+    )
+  in
+
+  (* Aggregate results from parallel tasks *)
+  List.fold_left (fun acc task -> acc + Domain.join task) 0 tasks
+
 
 (** [parse input] converts input string to 2D grid *)
 let parse input =
