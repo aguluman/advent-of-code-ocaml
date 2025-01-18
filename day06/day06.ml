@@ -1,8 +1,6 @@
 (** Solution for Day 6 of Advent of Code.
     Implements path finding in a 2D grid with directional movement. *)
 
-open Stdio
-
 (** Direction represents possible movements in the grid. *)
 type direction = 
   | Up    (** Move upward *)
@@ -37,22 +35,25 @@ let part1 map =
     | Some (ni, nj) ->
       let ni, nj, nd, nh =
         if map.(ni).(nj) = '#' then
-          (* Hit wall - stay in place but rotate *)
+          (* Hit wall - stay in place but rotate           
+             Obstacle found: stay put + rotate right (Direction handling) *)
           (i, j, next_direction dir, history)
         else
-          (* Move to new position *)
+          (* Move forward + track position (History tracking) *)
           (ni, nj, dir, (ni, nj) :: history)
       in
       (ni, nj, nd, nh)
-    | None -> (i, j, dir, history)
+    | None -> (i, j, dir, history) (* Out of bounds: stay put *)
   in
 
   let rec loop (i, j, dir, history) =
     (**[loop (i,j,dir,history)] follows path until cycle is detected.
         Returns number of unique positions visited*)
     let (ni, nj, nd, nh) = forward (i, j) dir history in
+    (* Check if we're stuck (same position and direction) *)
     if (ni, nj) = (i, j) && dir = nd then
-      List.length (List.sort_uniq compare history)
+      (* Count unique positions *)
+      history |> List.sort_uniq compare |> List.length
     else
       loop (ni, nj, nd, nh)
   in
@@ -62,11 +63,13 @@ let part1 map =
     List.find (fun (i, j) -> map.(i).(j) = '^')
       (List.concat (List.init n (fun i -> List.init n (fun j -> (i, j)))))
   in
+  (* Start simulation with initial position and Up direction *)
   loop (si, sj, Up, [(si, sj)])
 
 let part2 map =
   let n = Array.length map in
-  Array.iter (fun row -> if Array.length row <> n then failwith "Invalid map: not all rows have the same length") map;
+  Array.iter (fun row -> if Array.length row <> n then 
+    failwith "Invalid map: not all rows have the same length") map;
 
   let find_loop map (i, j) dir =
     (**[find_loop map (i,j) dir] checks if blocking position creates loop.
@@ -139,10 +142,10 @@ let () =
   let start_time = Unix.gettimeofday () in
 
   let part1_result = part1 input in
-  printf "Part 1: %d\n" part1_result;
+  Printf.printf "Part 1: %d\n" part1_result;
 
   let part2_result = part2 input in
-  printf "Part 2: %d\n" part2_result;
+  Printf.printf "Part 2: %d\n" part2_result;
 
   let end_time = Unix.gettimeofday () in
-  printf "Elapsed time: %f seconds\n" (end_time -. start_time)
+  Printf.printf "Elapsed time: %f seconds\n" (end_time -. start_time)
