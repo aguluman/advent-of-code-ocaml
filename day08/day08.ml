@@ -21,15 +21,21 @@ let unfold generator initial_state =
 let calculate_antinode_positions grid_size (start_row, start_col) (end_row, end_col) =
   if (start_row, start_col) = (end_row, end_col) then []
   else
-    let row_step = end_row - start_row in
-    let col_step = end_col - start_col in
+    let row_step = end_row - start_row 
+  in
+    let col_step = end_col - start_col 
+  in
     unfold (fun (current_row, current_col) ->
-      let next_row = current_row + row_step in
-      let next_col = current_col + col_step in
+      let next_row = current_row + row_step 
+    in
+      let next_col = current_col + col_step 
+    in
       if next_row >= 0 && next_row < grid_size && next_col >= 0 && next_col < grid_size
-      then Some ((next_row, next_col), (next_row, next_col))
-      else None
-    ) (end_row, end_col)
+      then 
+        Some ((next_row, next_col), (next_row, next_col))
+      else 
+        None)
+ (end_row, end_col)
 
 (** [Core solver] function for both problem parts *)
 let solve_grid grid position_mapper =
@@ -54,7 +60,8 @@ let solve_grid grid position_mapper =
   
   valid_chars
   |> List.map (fun char ->
-      let char_locations = find_char_positions char in
+      let char_locations = find_char_positions char 
+    in
       let mapped_points = 
         create_ordered_pairs char_locations char_locations
         |> List.concat_map (fun ((r1, c1), (r2, c2)) -> 
