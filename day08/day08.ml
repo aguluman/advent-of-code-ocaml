@@ -53,8 +53,8 @@ let solve_grid grid position_mapper =
   
   let find_char_positions char =
     create_ordered_pairs 
-      (generate_range_sequence 0 (grid_size - 1)) 
-      (generate_range_sequence 0 (grid_size - 1))
+      (generate_range_sequence 0 (grid_size - 1)) (* For rows*)
+      (generate_range_sequence 0 (grid_size - 1)) (* For columns*)
     |> List.filter (fun (row, col) -> grid.(row).(col) = char)
   in
   
