@@ -23,6 +23,7 @@ _opam/
 *~
 \#*#
 .#*
+.idea/
 
 # System specific
 .DS_Store

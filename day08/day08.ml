@@ -1,97 +1,103 @@
-(* Helper function to generate ranges *)
-let range start end_val =
-  let rec aux start end_val acc =
-    if start > end_val then List.rev acc
-    else aux (start + 1) end_val (start :: acc)
-  in aux start end_val []
+(** Generate a list of integers from [start] to [end_inclusive] *)
+let generate_range_sequence start end_inclusive =
+  let rec build_sequence current accumulator =
+    if current > end_inclusive then List.rev accumulator
+    else build_sequence (current + 1) (current :: accumulator)
+  in build_sequence start []
 
-(* Generate all pairs from two lists *)
-let list_allpairs xs ys =
-  List.concat (List.map (fun x -> List.map (fun y -> (x,y)) ys) xs)
+(** Create [all possible ordered pairs] between [elements of two lists] *)
+let create_ordered_pairs list1 list2 =
+  List.concat (List.map (fun x -> List.map (fun y -> (x, y)) list2) list1)
 
-(* Convert F#'s List.unfold to OCaml *)
-let unfold f state =
-  let rec aux acc state =
-    match f state with
-    | None -> List.rev acc
-    | Some (value, newState) -> aux (value :: acc) newState
-  in aux [] state
+(** Implement unfold to generate a list from state transitions *)
+let unfold generator initial_state =
+  let rec accumulate generated current_state =
+    match generator current_state with
+    | None -> List.rev generated
+    | Some (value, new_state) -> accumulate (value :: generated) new_state
+  in accumulate [] initial_state
 
-let antinodePositions n (i, j) (i', j') =
-  if (i, j) = (i', j') then []
+(** Calculate positions [along the line from start] to [end within grid bounds] *)
+let calculate_antinode_positions grid_size (start_row, start_col) (end_row, end_col) =
+  if (start_row, start_col) = (end_row, end_col) then []
   else
-    let di, dj = (i' - i, j' - j) in
-    unfold (fun (i', j') ->
-      let ni, nj = (i' + di, j' + dj) in
-      if 0 <= ni && ni < n && 0 <= nj && nj < n then
-        Some((ni, nj), (ni, nj))
+    let row_step = end_row - start_row in
+    let col_step = end_col - start_col in
+    unfold (fun (current_row, current_col) ->
+      let next_row = current_row + row_step in
+      let next_col = current_col + col_step in
+      if next_row >= 0 && next_row < grid_size && next_col >= 0 && next_col < grid_size
+      then Some ((next_row, next_col), (next_row, next_col))
       else None
-    ) (i', j')
+    ) (end_row, end_col)
 
-let solve map mapping =
-  let n = Array.length map in
-  assert (Array.for_all (fun row -> Array.length row = n) map);
+(** [Core solver] function for both problem parts *)
+let solve_grid grid position_mapper =
+  let grid_size = Array.length grid in
+  assert (Array.for_all (fun row -> Array.length row = grid_size) grid);
   
-  let chars = 
-    List.append (range (Char.code '0') (Char.code '9'))
-    (List.append 
-       (range (Char.code 'a') (Char.code 'z'))
-       (range (Char.code 'A') (Char.code 'Z')))
+  let valid_chars = 
+    List.append 
+      (generate_range_sequence (Char.code '0') (Char.code '9'))
+      (List.append 
+         (generate_range_sequence (Char.code 'a') (Char.code 'z'))
+         (generate_range_sequence (Char.code 'A') (Char.code 'Z')))
     |> List.map Char.chr
   in
   
-  let positions c =
-    list_allpairs (range 0 (n-1)) (range 0 (n-1))
-    |> List.filter (fun (i,j) -> map.(i).(j) = c)
+  let find_char_positions char =
+    create_ordered_pairs 
+      (generate_range_sequence 0 (grid_size - 1)) 
+      (generate_range_sequence 0 (grid_size - 1))
+    |> List.filter (fun (row, col) -> grid.(row).(col) = char)
   in
   
-  chars
-  |> List.map (fun c ->
-      let pos = positions c in
-      let new_pos = 
-        list_allpairs pos pos
-        |> List.concat_map (fun ((i,j), (i',j')) -> 
-            mapping n (i,j) (i',j'))
+  valid_chars
+  |> List.map (fun char ->
+      let char_locations = find_char_positions char in
+      let mapped_points = 
+        create_ordered_pairs char_locations char_locations
+        |> List.concat_map (fun ((r1, c1), (r2, c2)) -> 
+            position_mapper grid_size (r1, c1) (r2, c2))
       in
-      List.sort_uniq compare new_pos)
+      List.sort_uniq compare mapped_points)
   |> List.concat
   |> List.sort_uniq compare
   |> List.length
 
-let part1 map =
-  solve map (fun n (i,j) (i',j') ->
-    match antinodePositions n (i,j) (i',j') with
+(** [Part 1]: Consider first valid antinode position *)
+let part1 grid =
+  solve_grid grid (fun size (r1, c1) (r2, c2) ->
+    match calculate_antinode_positions size (r1, c1) (r2, c2) with
     | [] -> []
-    | h :: _ -> [h])
+    | first_pos :: _ -> [first_pos])
 
-let part2 map =
-  solve map (fun n (i,j) (i',j') ->
-    (i',j') :: antinodePositions n (i,j) (i',j'))
+(** [Part 2]: Include endpoint and all valid antinodes *)
+let part2 grid =
+  solve_grid grid (fun size (r1, c1) (r2, c2) ->
+    (r2, c2) :: calculate_antinode_positions size (r1, c1) (r2, c2))
 
-
-(** [parse input] converts input string to 2D grid *)
+(** Convert input string to 2D character array *)
 let parse input =
   input
   |> String.split_on_char '\n'
-  |> List.filter (fun s -> String.trim s <> "")
+  |> List.filter (fun line -> String.trim line <> "")
   |> List.map (fun row -> 
-    Array.of_list (List.init (String.length row) (String.get row)))
+      Array.of_list (List.init (String.length row) (String.get row)))
   |> Array.of_list
 
-
+(** Main execution *)
 let () =
-  let input = 
-    In_channel.input_all In_channel.stdin 
-    |> String.trim
-  in
-  let map = parse input in
+  let input = In_channel.input_all In_channel.stdin |> String.trim in
+  let grid = parse input in
 
-  let start_time = Unix.gettimeofday () in
+  let timer_start = Unix.gettimeofday () in
 
-  map |> part1 |> Printf.printf "Part 1: %d\n";
+  grid |> part1 |> Printf.printf "Part 1: %d\n";
+  grid |> part2 |> Printf.printf "Part 2: %d\n";
 
-  map |> part2 |> Printf.printf "Part 2: %d\n";
+  let timer_end = Unix.gettimeofday () in
 
-  let end_time = Unix.gettimeofday () in
-  let elapsed = end_time -. start_time in
-  Printf.printf "Elapsed time: %.4f seconds\n" elapsed
+  let elapsed = timer_end -. timer_start in
+
+  Printf.printf "Elapsed time: %.4f seconds\n" (elapsed)
