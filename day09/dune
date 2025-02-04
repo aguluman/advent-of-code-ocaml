@@ -1,0 +1,3 @@
+(executable
+ (name test)
+ (libraries base stdio ounit2 domainslib zarith))
