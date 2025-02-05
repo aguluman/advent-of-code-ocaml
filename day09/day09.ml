@@ -1,9 +1,13 @@
-module IntSet = Set.Make(Int)
-
+(** Type representing a disk block - either Free or Occupied with a file_id *)
 type block =
   | Free
   | Occupied of int (* file_id *)
 
+
+
+(** Calculate filesystem checksum by multiplying block positions with file IDs
+    @param disk Array of disk blocks
+    @return Int64 checksum value *)
 let checksum disk =
   Array.mapi (fun i block_type ->
     match block_type with
@@ -12,6 +16,10 @@ let checksum disk =
   |> Array.fold_left Int64.add 0L
 
 
+
+(** Part 1: Compact files from right to left, filling gaps
+    @param disk Array of disk blocks
+    @return Int64 checksum of compacted disk *)
 let part1 disk =
   let rec compact left_pos right_pos disk =
     if left_pos >= right_pos then disk
@@ -31,6 +39,9 @@ let part1 disk =
 
 
 
+(** Part 2: Move contiguous file blocks to first available free space
+    @param disk Array of disk blocks 
+    @return Int64 checksum of reorganized disk *)
 let part2 disk =
   let rec compact right_pos disk =
     if right_pos <= 0 then disk
@@ -71,17 +82,21 @@ let part2 disk =
               done;
               compact new_r disk
   in
-  let disk_copy = Array.copy disk in
-  checksum (compact (Array.length disk_copy - 1) disk_copy)
+    let disk_copy = Array.copy disk 
+  in
+    checksum (compact (Array.length disk_copy - 1) disk_copy)
 
 
 
+(** Parse input string into disk block array
+    @param input String of alternating file sizes and free space lengths
+    @return Array of disk blocks *)
 let parse input =
   let digits = input |> String.to_seq |> Array.of_seq in
   let disk_blocks = ref [] in
-  Array.iteri (fun i c ->
-    let block_length = int_of_char c - int_of_char '0' in
-    let block_type = if i mod 2 = 0 then Occupied(i/2) else Free in
+  Array.iteri (fun integer character ->
+    let block_length = int_of_char character - int_of_char '0' in
+    let block_type = if integer mod 2 = 0 then Occupied(integer/2) else Free in
     for _ = 1 to block_length do
       disk_blocks := block_type :: !disk_blocks
     done
@@ -90,17 +105,17 @@ let parse input =
 
 
 
+(** Main entry point - reads input, runs both function parts and prints results with timing *)
 let () =
   let input = input_line stdin in
   let disk = parse input in
 
   let timer_start = Unix.gettimeofday () in
   
-  Printf.printf "Part 1: %Ld\block_length" (part1 disk);
-  disk |> part2 |> Printf.printf "Part 2: %Ld\block_length";
+  Printf.printf "Part 1: %Ld\n" (part1 disk);
+  disk |> part2 |> Printf.printf "Part 2: %Ld\n";
 
   let timer_end = Unix.gettimeofday () in
 
   let elapsed = timer_end -. timer_start in
-
-  Printf.printf "Elapsed time: %.4f seconds\block_length" (elapsed)
+  Printf.printf "Elapsed time: %.4f seconds\n" elapsed
