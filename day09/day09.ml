@@ -59,7 +59,7 @@ let part2 disk =
 
           let new_r = right_pos - length in
 
-          (* Find first position that can fit length Free blocks *)
+          (* (Find Free Space) Find first position that can fit length Free blocks *)
           let rec find_free_pos left_pos =
             if left_pos > right_pos then None
             else 
@@ -72,10 +72,11 @@ let part2 disk =
               else find_free_pos (left_pos + 1)
           in
 
+          (* Block Movement*)
           match find_free_pos 0 with
           | None -> compact new_r disk
           | Some left_pos ->
-              (* Swap blocks *)
+              (* Swap blocks to new position *)
               for d = 0 to length - 1 do
                 disk.(left_pos + d) <- Occupied file_id;
                 disk.(new_r + 1 + d) <- Free
