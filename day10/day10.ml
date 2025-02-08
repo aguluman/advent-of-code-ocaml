@@ -15,9 +15,12 @@ let rec range start end_val =
   if start > end_val then [] 
   else start :: range (start + 1) end_val
 
+
+
+
 (** Part 1: Count paths from height 0 to height 9 in the height map
     @param height_map The 2D array representing height values
-    @return Number of valid paths found *)
+    @return Number of valid paths(endpoints) found *)
 let part1 height_map =
   let grid_size = Array.length height_map in
   (* Ensure map is square *)
@@ -61,8 +64,13 @@ let part1 height_map =
          else path_count)
        0
 
-(** Part 2: Count all possible paths from height 0 to 9
-    Similar to part1 but tracks entire paths instead of just endpoints *)
+
+
+
+
+(** Part 2: Count all possible paths from height 0 to 9 in the height map
+    @param height_map A 2D array of integers representing elevation at each point
+    @return Total number of unique paths that start at height 0 and end at height 9 *)
 let part2 height_map =
   let grid_size = Array.length height_map in
   height_map |> Array.iter (fun row -> assert (Array.length row = grid_size));
@@ -104,6 +112,10 @@ let part2 height_map =
          else path_count)
        0
 
+
+
+
+
 (** Parse input string into 2D array of integers
     @param input String containing newline-separated rows of single digits *)
 let parse input =
@@ -117,6 +129,9 @@ let parse input =
        |> Array.of_list)                 (* Convert to array *)
   |> Array.of_list                       (* Convert outer list to array *)
 
+
+
+  
 (** Main execution *)
 let () =
   In_channel.input_all In_channel.stdin
