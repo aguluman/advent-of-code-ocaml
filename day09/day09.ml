@@ -9,11 +9,14 @@ type block =
     @param disk Array of disk blocks
     @return Int64 checksum value *)
 let checksum disk =
-  Array.mapi (fun i block_type ->
-    match block_type with
-    | Free -> 0L
-    | Occupied file_id -> Int64.mul (Int64.of_int i) (Int64.of_int file_id)) disk
+  disk
+  |> Array.mapi (fun i block_type ->
+       match block_type with
+       | Free -> 0L
+       | Occupied file_id -> 
+           (Int64.of_int i) |> Int64.mul (Int64.of_int file_id))
   |> Array.fold_left Int64.add 0L
+
 
 
 
@@ -21,21 +24,26 @@ let checksum disk =
     @param disk Array of disk blocks
     @return Int64 checksum of compacted disk *)
 let part1 disk =
-  let rec compact left_pos right_pos disk =
-    if left_pos >= right_pos then disk
-    else
-      match (disk.(left_pos), disk.(right_pos)) with
-      | (Free, Free) -> compact left_pos (right_pos - 1) disk
-      | (Free, Occupied file_id) ->
-          (* swap disk.(left_pos), disk.(right_pos) *)
-          disk.(left_pos) <- Occupied file_id;
-          disk.(right_pos) <- Free;
-          compact (left_pos + 1) (right_pos - 1) disk
-      | (Occupied _, Free) -> compact (left_pos + 1) (right_pos - 1) disk
-      | (Occupied _, Occupied _) -> compact (left_pos + 1) right_pos disk
-  in
-  let disk_copy = Array.copy disk in
-  checksum (compact 0 (Array.length disk_copy - 1) disk_copy)
+  disk
+  |> Array.copy
+  |> fun disk_copy -> 
+      let rec compact left_pos right_pos disk =
+        if left_pos >= right_pos then disk
+        else
+          match (disk.(left_pos), disk.(right_pos)) with
+          | (Free, Free) -> 
+              disk |> compact left_pos (right_pos - 1)
+          | (Free, Occupied file_id) ->
+              disk.(left_pos) <- Occupied file_id;
+              disk.(right_pos) <- Free;
+              disk |> compact (left_pos + 1) (right_pos - 1)
+          | (Occupied _, Free) -> 
+              disk |> compact (left_pos + 1) (right_pos - 1)
+          | (Occupied _, Occupied _) -> 
+              disk |> compact (left_pos + 1) right_pos
+      in
+      compact 0 (Array.length disk_copy - 1) disk_copy
+  |> checksum
 
 
 
@@ -93,30 +101,38 @@ let part2 disk =
     @param input String of alternating file sizes and free space lengths
     @return Array of disk blocks *)
 let parse input =
-  let digits = input |> String.to_seq |> Array.of_seq in
-  let disk_blocks = ref [] in
-  Array.iteri (fun integer character ->
-    let block_length = int_of_char character - int_of_char '0' in
-    let block_type = if integer mod 2 = 0 then Occupied(integer/2) else Free in
-    for _ = 1 to block_length do
-      disk_blocks := block_type :: !disk_blocks
-    done
-  ) digits;
-  Array.of_list (List.rev !disk_blocks)
+  input
+  |> String.to_seq
+  |> Array.of_seq
+  |> fun digits ->
+      let disk_blocks = ref [] in
+      digits |> Array.iteri (fun integer character ->
+        let block_length = int_of_char character - int_of_char '0' in
+        let block_type = 
+          if integer mod 2 = 0 
+          then Occupied(integer/2) 
+          else Free in
+        for _ = 1 to block_length do
+          disk_blocks := block_type :: !disk_blocks
+        done
+      );
+      !disk_blocks
+  |> List.rev
+  |> Array.of_list
 
 
 
 (** Main entry point - reads input, runs both function parts and prints results with timing *)
 let () =
-  let input = input_line stdin in
-  let disk = parse input in
+  stdin
+  |> input_line
+  |> parse
+  |> fun disk ->
+      let timer_start = Unix.gettimeofday () in
+      
+      disk |> part1 |> Printf.printf "Part 1: %Ld\n";
+      disk |> part2 |> Printf.printf "Part 2: %Ld\n";
+     
+      Unix.gettimeofday () -. timer_start
 
-  let timer_start = Unix.gettimeofday () in
-  
-  Printf.printf "Part 1: %Ld\n" (part1 disk);
-  disk |> part2 |> Printf.printf "Part 2: %Ld\n";
-
-  let timer_end = Unix.gettimeofday () in
-
-  let elapsed = timer_end -. timer_start in
-  Printf.printf "Elapsed time: %.4f seconds\n" elapsed
+  |> Printf.printf "Elapsed time: %.4f seconds\n"
