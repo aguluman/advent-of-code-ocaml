@@ -1,69 +1,93 @@
+(** Module for handling large integer maps in the stone transformation puzzle *)
 module IntMap = Map.Make(Int64)
 
 
 
-
-let blink stone = 
-  if stone = 0L then
+(** [blink current_stone] applies transformation rules to a single stone:
+    - If stone is 0, it becomes 1
+    - If stone has even number of digits, splits into two stones
+    - If stone has odd number of digits or otherwise, multiplies it by 2024
+    @param current_stone The stone to transform
+    @return List of new stones after transformation
+*)
+let blink current_stone = 
+  if current_stone = 0L then
     [ 1L ]
   else 
-    let stone_string = stone |> Int64.to_string in
-    if String.length stone_string mod 2 = 0 then
+    let digit_string = current_stone |> Int64.to_string in
+    let digit_count = String.length digit_string in
+    if digit_count mod 2 = 0 then
+      let half_length = digit_count / 2 in
       [Int64.of_string 
-        (String.sub stone_string 0 (String.length stone_string / 2)); 
+        (String.sub digit_string 0 half_length); 
        Int64.of_string 
-        (String.sub stone_string (String.length stone_string / 2) 
-         (String.length stone_string / 2))]
+        (String.sub digit_string half_length half_length)]
     else 
-      [Int64.mul stone 2024L]
+      [Int64.mul current_stone 2024L]
 
 
 
 
-
-let part1 stones = 
-  let initial_stones = stones |> List.of_seq in
+(** [part1 initial_stones] simulates 25 blinks and counts resulting stones
+    @param initial_stones Sequence of starting stones
+    @return Total number of stones after 25 transformations
+*)
+let part1 initial_stones = 
+  let starting_stones = initial_stones |> List.of_seq in
   List.init 25 (fun _ -> ())
   |> List.fold_left 
-    (fun acc _ -> acc |> List.concat_map blink) 
-    initial_stones
+    (fun current_generation _ -> 
+       current_generation |> List.concat_map blink) 
+    starting_stones
   |> List.length
 
 
 
-let part2 stones =
+
+(** [part2 initial_stones] simulates 75 blinks efficiently using count tracking
+    @param initial_stones Sequence of starting stones
+    @return Total number of stones after 75 transformations
+*)
+let part2 initial_stones =
   (* Initialize map with each stone having count of 1 *)
-  let initial_map = 
-    stones 
-    |> Seq.map (fun x -> (x, 1L))
+  let starting_map = 
+    initial_stones 
+    |> Seq.map (fun stone -> (stone, 1L))
     |> List.of_seq
     |> List.to_seq  (* Convert back to sequence for IntMap.of_seq *)
     |> IntMap.of_seq
   in
-  (* Do 75 blinks *)
+  (* Simulate 75 blinks *)
   List.init 75 (fun _ -> ())
-  |> List.fold_left (fun acc_map _ ->
-      (* For each stone and its count in current map *)
-      IntMap.fold (fun stone count new_map ->
-        (* Apply blink to current stone *)
-        blink stone
-        |> List.fold_left (fun map new_stone ->
-            (* Add count to new stone's existing count (if any) *)
-            let current = 
-              match IntMap.find_opt new_stone map with
+  |> List.fold_left (fun generation_map _ ->
+      (* Transform each stone and update counts *)
+      IntMap.fold (fun current_stone frequency new_generation_map ->
+        (* Get new stones from current stone *)
+        blink current_stone
+        |> List.fold_left (fun accumulated_map new_stone ->
+            (* Update count for new stone *)
+            let existing_frequency = 
+              match IntMap.find_opt new_stone accumulated_map with
               | Some count -> count
               | None -> 0L
             in
-            IntMap.add new_stone (Int64.add current count) map
-          ) new_map
-      ) acc_map IntMap.empty
-    ) initial_map
-  |> (fun m -> IntMap.fold (fun _ count acc -> Int64.add acc count) m 0L)
+            IntMap.add new_stone (Int64.add existing_frequency frequency) accumulated_map
+          ) new_generation_map
+      ) generation_map IntMap.empty
+    ) starting_map
+  |> (fun final_map -> 
+      IntMap.fold (fun _ stone_count total -> 
+        Int64.add total stone_count) final_map 0L)
 
 
 
-let parse input = 
-  input 
+
+(** [parse input_string] converts space-separated numbers to stone sequence
+    @param input_string Space-separated string of numbers
+    @return Sequence of int64 stones
+*)
+let parse input_string = 
+  input_string 
   |> String.split_on_char ' '
   |> List.map Int64.of_string
   |> List.to_seq
@@ -71,14 +95,15 @@ let parse input =
 
 
 
+(** Main program entry point *)
 let () =
-  let input = read_line () in
-  let stones = parse input in
+  let input_string = read_line () in
+  let initial_stones = parse input_string in
   
-  let timer_start = Unix.gettimeofday () in 
+  let execution_start = Unix.gettimeofday () in 
 
-  stones |> part1 |> Printf.printf "Part 1: %d\n";
-  stones |> part2 |> Printf.printf "Part 2: %Ld\n";
+  initial_stones |> part1 |> Printf.printf "Part 1: %d\n";
+  initial_stones |> part2 |> Printf.printf "Part 2: %Ld\n";
 
-  Unix.gettimeofday () -. timer_start
-  |> Printf.printf "Elapsed time: %.4f seconds\n" 
+  Unix.gettimeofday () -. execution_start
+  |> Printf.printf "Elapsed time: %.4f seconds\n"
