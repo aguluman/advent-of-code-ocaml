@@ -75,10 +75,10 @@ let () =
   let input = read_line () in
   let stones = parse input in
   
-  (*let timer_start = Unix.gettimeofday () in *)
+  let timer_start = Unix.gettimeofday () in 
 
   stones |> part1 |> Printf.printf "Part 1: %d\n";
   stones |> part2 |> Printf.printf "Part 2: %Ld\n";
-(*
+
   Unix.gettimeofday () -. timer_start
-  |> Printf.printf "Elapsed time: %.4f seconds\n" *)
+  |> Printf.printf "Elapsed time: %.4f seconds\n" 
