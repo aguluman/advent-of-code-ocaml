@@ -1,4 +1,4 @@
-(** Module for representing a set of garden plot coordinates. *)
+(** Module for representing a [Set] of garden plot coordinates. *)
 module GardenPlotSet = Set.Make(struct
   (** A garden plot coordinate represented as [(row, col)] *)
   type t = int * int    
@@ -152,7 +152,9 @@ let part2 garden_plots =
 
     (* Count corners *)
     let count_corner (i, j) =
-      let surrounding_points = [(i - 1, j - 1); (i - 1, j); (i, j - 1); (i, j)] in
+      let surrounding_points = 
+        [(i - 1, j - 1); (i - 1, j); (i, j - 1); (i, j)] 
+    in
       let surrounding = 
         List.filter (fun pos -> GardenPlotSet.mem pos positions) surrounding_points
         |> List.sort compare
