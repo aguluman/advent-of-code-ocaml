@@ -1,89 +1,119 @@
-(** Module for handling coordinate pairs in a grid *)
-module CoordSet = Set.Make(struct
-  (** [(row, col)] coordinate pair *)
+(** Module for representing a set of garden plot coordinates. *)
+module GardenPlotSet = Set.Make(struct
+  (** A garden plot coordinate represented as [(row, col)] *)
   type t = int * int    
   let compare = compare
 end)
 
 
 
-(** Find all connected positions with same plant type using DFS
-    @param garden_map The 2D array of plant types
-    @param row Current row position
-    @param col Current column position
-    @param visited Set of already visited positions
-    @return Set of all positions in the same region *)
-let rec region garden_map (row, col) visited =
-  let direction_vectors = [(-1, 0); (0, -1); (1, 0); (0, 1)] in
-  let visited_with_current = CoordSet.add (row, col) visited in
+
+(** Find all connected garden plots with the same plant type using Depth-First Search
+    @param garden_plots The 2D array representing the garden layout
+    @param current_row Starting row position
+    @param current_col Starting column position
+    @param discovered_plots Set of already discovered plot positions
+    @return Set of all plot positions containing the same plant type *)
+let rec find_connected_plots garden_plots (current_row, current_col) discovered_plots =
+  let adjacent_directions = [(-1, 0); (0, -1); (1, 0); (0, 1)] (* Up, Left, Down, Right *)
+in 
+  let plots_with_current = GardenPlotSet.add (current_row, current_col) discovered_plots 
+in
   
-  List.fold_left (fun visited_positions (delta_row, delta_col) ->
-    let next_row = row + delta_row in
-    let next_col = col + delta_col in
-    if next_row >= 0 && next_row < Array.length garden_map &&
-       next_col >= 0 && next_col < Array.length garden_map.(row) &&
-       garden_map.(row).(col) = garden_map.(next_row).(next_col) &&
-       not (CoordSet.mem (next_row, next_col) visited_positions)
+  List.fold_left (fun discovered (row_step, col_step) ->
+    let next_row = current_row + row_step 
+  in
+    let next_col = current_col + col_step 
+  in
+
+    let is_valid_position = 
+      next_row >= 0 && next_row < Array.length garden_plots &&
+      next_col >= 0 && next_col < Array.length garden_plots.(current_row) 
+    in
+
+    let is_same_plant_type = 
+      is_valid_position && 
+      garden_plots.(current_row).(current_col) = garden_plots.(next_row).(next_col) 
+    in
+
+    let is_undiscovered = 
+      not (GardenPlotSet.mem (next_row, next_col) discovered) 
+    in
+
+    if 
+      is_valid_position && is_same_plant_type && is_undiscovered 
     then
-      region garden_map (next_row, next_col) visited_positions
+      find_connected_plots garden_plots (next_row, next_col) discovered
     else
-      visited_positions
-  ) visited_with_current direction_vectors
+      discovered
+  ) plots_with_current adjacent_directions
 
 
 
 
-(** Generate cartesian product of two lists
-    @param list1 First list
-    @param list2 Second list
-    @return List of all possible pairs *)
-let cartesian_product list1 list2 =
+(** Generate cartesian product of two lists [(list1 * list2)]
+    @param list1 First list of elements
+    @param list2 Second list of elements
+    @return List containing all possible pairs from both lists *)
+let generate_combinations list1 list2 =
   list1 
-  |> List.map (fun elem1 -> 
+  |> List.map (fun item1 -> 
        list2 
-       |> List.map (fun elem2 -> (elem1, elem2)))
+       |> List.map (fun item2 -> (item1, item2)))
   |> List.concat
 
-(** Calculate total price for all regions in garden
-    @param garden_map The 2D array of plant types
-    @param price_calculator Function to calculate price for a region
-    @return Total price for all regions *)
-let solve garden_map price_calculator =
-  let grid_size = Array.length garden_map in
-  garden_map |> Array.iter (fun row -> assert (Array.length row = grid_size));
+
+
+(** Calculate total fencing cost for all plant regions in garden
+    @param garden_plots The 2D array representing the garden layout
+    @param calculate_region_cost Function to calculate cost for a specific region
+    @return Total fencing cost for all regions *)
+let calculate_total_cost garden_plots calculate_region_cost =
+  let garden_size = Array.length garden_plots in
+  garden_plots |> Array.iter (fun row -> assert (Array.length row = garden_size));
   
-  let grid_indices = List.init grid_size (fun index -> index) in
-  let all_positions = cartesian_product grid_indices grid_indices in
-  
-  let process_position (total_price, visited_positions) (row, col) =
-    if CoordSet.mem (row, col) visited_positions then
-      (total_price, visited_positions)
-    else
-      let current_region = region garden_map (row, col) CoordSet.empty in
-      (total_price + price_calculator current_region, 
-       CoordSet.union visited_positions current_region)
+  let garden_coordinates = 
+    List.init garden_size (fun index -> index) 
+  in
+  let all_plot_positions = 
+    generate_combinations garden_coordinates garden_coordinates 
   in
   
-  let (final_price, _) = List.fold_left process_position (0, CoordSet.empty) all_positions in
-  final_price
-
+  let process_plot (total_cost, processed_plots) (row, col) =
+    if 
+      GardenPlotSet.mem (row, col) processed_plots 
+    then
+      (total_cost, processed_plots)
+    else
+      let current_plant_region = find_connected_plots garden_plots (row, col) GardenPlotSet.empty
+    in
+      (total_cost + calculate_region_cost current_plant_region, 
+       GardenPlotSet.union processed_plots current_plant_region)
+  in
+  
+  let (final_cost, _) = 
+    List.fold_left process_plot (0, GardenPlotSet.empty) all_plot_positions 
+  in
+  final_cost
 
 
 
 (** Calculate solution for part 1
-    @param garden_map The 2D array of plant types
+    @param garden_plots The 2D array of plant types
     @return Total price using area * perimeter calculation *)
-let part1 garden_map =
+let part1 garden_plots =
   let calculate_region_price positions =
-    let area = CoordSet.cardinal positions in
+    let area = GardenPlotSet.cardinal positions in
     let perimeter =
-      CoordSet.fold (fun (row, col) perimeter_count ->
+      GardenPlotSet.fold (fun (row, col) perimeter_count ->
         List.fold_left (fun count (delta_row, delta_col) ->
-          let next_row = row + delta_row in
-          let next_col = col + delta_col in
-          if next_row >= 0 && next_row < Array.length garden_map &&
-             next_col >= 0 && next_col < Array.length garden_map.(next_row) &&
-             garden_map.(row).(col) = garden_map.(next_row).(next_col)
+          let next_row = row + delta_row 
+        in
+          let next_col = col + delta_col 
+        in
+          if next_row >= 0 && next_row < Array.length garden_plots &&
+             next_col >= 0 && next_col < Array.length garden_plots.(next_row) &&
+             garden_plots.(row).(col) = garden_plots.(next_row).(next_col)
           then 
             (* Don't count this side - it touches same plant type *)
             count
@@ -95,17 +125,17 @@ let part1 garden_map =
     in
     area * perimeter
   in
-  solve garden_map calculate_region_price
+  calculate_total_cost garden_plots calculate_region_price
 
 
 
 
 (** Calculate solution for part 2
-    @param garden_map The 2D array of plant types
+    @param garden_plots The 2D array of plant types
     @return Total price using area * number of corners calculation *)
-let part2 garden_map =
+let part2 garden_plots =
   let calculate_region_price positions =
-    let area = CoordSet.cardinal positions in
+    let area = GardenPlotSet.cardinal positions in
     
     (* Generate all intersection points from positions *)
     let get_intersections (row, col) =
@@ -113,18 +143,18 @@ let part2 garden_map =
     in
     
     let intersections = 
-      CoordSet.fold (fun pos acc -> 
+      GardenPlotSet.fold (fun pos acc -> 
         List.fold_left (fun set point -> 
-          CoordSet.add point set
+          GardenPlotSet.add point set
         ) acc (get_intersections pos)
-      ) positions CoordSet.empty
+      ) positions GardenPlotSet.empty
     in
 
     (* Count corners *)
     let count_corner (i, j) =
       let surrounding_points = [(i - 1, j - 1); (i - 1, j); (i, j - 1); (i, j)] in
       let surrounding = 
-        List.filter (fun pos -> CoordSet.mem pos positions) surrounding_points
+        List.filter (fun pos -> GardenPlotSet.mem pos positions) surrounding_points
         |> List.sort compare
       in
       
@@ -141,14 +171,14 @@ let part2 garden_map =
     in
 
     let corner_count = 
-      CoordSet.fold (fun pos acc ->
+      GardenPlotSet.fold (fun pos acc ->
         acc + count_corner pos
       ) intersections 0
     in
     
     area * corner_count
   in
-  solve garden_map calculate_region_price
+  calculate_total_cost garden_plots calculate_region_price
 
 
   
