@@ -137,10 +137,13 @@ let part2 garden_plots =
   let calculate_region_price positions =
     let area = GardenPlotSet.cardinal positions in
     
-    (* Generate all intersection points from positions *)
-    let get_intersections (row, col) =
-      [(row, col); (row + 1, col); (row, col + 1); (row + 1, col + 1)]
-    in
+    (* Step 1: For each cell, get its 4 corner points *)
+  let get_intersections (row, col) =
+    [(row, col);        (* top-left *)
+    (row + 1, col);     (* bottom-left *)
+    (row, col + 1);     (* top-right *)
+    (row + 1, col + 1)] (* bottom-right *) 
+  in
     
     let intersections = 
       GardenPlotSet.fold (fun pos acc -> 
