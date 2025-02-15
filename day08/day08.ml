@@ -7,7 +7,11 @@ let generate_range_sequence start end_inclusive =
 
 (** Create [all possible ordered pairs] between [elements of two lists] *)
 let create_ordered_pairs list1 list2 =
-  List.concat (List.map (fun x -> List.map (fun y -> (x, y)) list2) list1)
+  list1 
+  |> List.map (fun item1 -> 
+       list2 
+       |> List.map (fun item2 -> (item1, item2)))
+  |> List.concat
 
 (** Implement unfold to generate a list from state transitions *)
 let unfold generator initial_state =
