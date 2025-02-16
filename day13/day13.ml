@@ -1,122 +1,154 @@
-(** Types for representing game machines and their components *)
-type button = {
-  add_x: int;
-  add_y: int
+(** Day 13: Claw Contraption
+    Solving a puzzle about claw machines where:
+    - Each machine has two buttons (A and B) that move the claw in X,Y directions
+    - Button A costs 3 tokens, Button B costs 1 token
+    - Need to position claw exactly above prizes
+    - Part 1: Find minimum tokens needed to win all possible prizes
+    - Part 2: Same but with prize coordinates offset by 10^13 *)
+
+
+
+(** Represents a button's movement pattern *)
+type claw_button = {
+  move_x: int;  (* Units to move along X axis *)
+  move_y: int   (* Units to move along Y axis *)
 }
 
-type prize = {
-  x: int;
-  y: int
+(** Represents prize coordinates *)
+type prize_location = {
+  target_x: int;
+  target_y: int
 }
 
-type machine = {
-  button_a: button;
-  button_b: button;
-  prize: prize
+(** Represents a complete claw machine configuration *)
+type claw_machine = {
+  button_a: claw_button;
+  button_b: claw_button;
+  prize: prize_location
 }
 
 
 
 
-(** Find minimum value in a list, returning None for empty lists
-    @param lst Input list of values
-    @return Option containing minimum value *)
-let try_min lst = 
-  match lst with
+
+(** Find minimum value in a list safely
+    @param values Input list of token costs
+    @return Option containing minimum cost, None if no solution exists *)
+let find_minimum_cost values = 
+  match values with
   | [] -> None
-  | xs -> Some (List.fold_left min (List.hd xs) (List.tl xs))
+  | costs -> Some (List.fold_left min (List.hd costs) (List.tl costs))
 
 
 
 
-(** Calculate total cost for part 1
-    @param machines Sequence of game machines
-    @return Sum of minimum costs for each machine *)
-let part1 machines =
+(** Calculate minimum tokens needed for Part 1
+    Tries combinations of button presses (max 100 each)
+    @param machines List of claw machines to solve
+    @return Sum of minimum token costs for winnable prizes *)
+let calculate_minimum_tokens machines =
   machines
-  |> List.fold_left (fun acc { button_a; button_b; prize } ->
-    let costs =
-      List.init 101 (fun i ->
-        List.init 101 (fun j ->
-          let x = button_a.add_x * i + button_b.add_x * j in
-          let y = button_a.add_y * i + button_b.add_y * j in
-          if x = prize.x && y = prize.y then
-            Some (i * 3 + j)
+  |> List.fold_left (fun total_tokens { button_a; button_b; prize } ->
+    let possible_costs =
+      List.init 101 (fun press_a ->
+        List.init 101 (fun press_b ->
+          let final_x = button_a.move_x * press_a + button_b.move_x * press_b in
+          let final_y = button_a.move_y * press_a + button_b.move_y * press_b in
+          if final_x = prize.target_x && final_y = prize.target_y then
+            Some (press_a * 3 + press_b)  (* Cost calculation: A=3 tokens, B=1 token *)
           else None))
       |> List.concat
       |> List.filter_map (fun x -> x)
     in
-    match try_min costs with
-    | None -> acc
-    | Some min_cost -> acc + min_cost
+    match find_minimum_cost possible_costs with
+    | None -> total_tokens        (* Machine is unsolvable *)
+    | Some cost -> total_tokens + cost
   ) 0
-
-
-
   
-(** Calculate total cost for part 2 using determinant method
-    @param machines List of game machines
-    @return Sum of costs calculated with large number offset *)
-let part2 machines =
+
+
+(** Calculate minimum tokens for Part 2 using linear equation solving
+    For large coordinates (offset by 10^13), we use determinants to solve
+    the system of linear equations:
+    press_a * button_a.x + press_b * button_b.x = prize.x + 10^13
+    press_a * button_a.y + press_b * button_b.y = prize.y + 10^13
+    @param machines List of claw machines to solve
+    @return Sum of minimum token costs (as Int64) for winnable prizes *)
+let calculate_large_coordinate_tokens machines =
   machines
-  |> List.fold_left (fun acc { button_a; button_b; prize } ->
-    (* Offset prize coordinates by large number *)
-    let px = Int64.(add (of_int prize.x) 10000000000000L) in
-    let py = Int64.(add (of_int prize.y) 10000000000000L) in
+  |> List.fold_left (fun total_tokens { button_a; button_b; prize } ->
+    (* Offset prize coordinates by 10^13 *)
+    let offset_x = Int64.(add (of_int prize.target_x) 10000000000000L) 
+  in
+    let offset_y = Int64.(add (of_int prize.target_y) 10000000000000L) 
+  in
     
-    (* Calculate determinant *)
-    let det = Int64.(
+    (* Calculate determinant for Cramer's rule
+        det = button_a.x * button_b.y - button_b.x * button_a.y *)
+    let determinant = Int64.(
       sub 
-        (mul (of_int button_a.add_x) (of_int button_b.add_y))
-        (mul (of_int button_b.add_x) (of_int button_a.add_y))
+        (mul (of_int button_a.move_x) (of_int button_b.move_y))
+        (mul (of_int button_b.move_x) (of_int button_a.move_y))
     ) in
     
-    if Int64.equal det 0L then
-      acc
+    (* If determinant is 0, system has no unique solution *)
+    if 
+      Int64.equal determinant 0L 
+    then
+      total_tokens
     else
-      (* Calculate numerators for i and j using 64-bit integers throughout *)
-      let num_i = Int64.(
+      (* Calculate press counts using Cramer's rule *)
+      let press_a_numerator = Int64.(
         sub
-          (mul (of_int button_b.add_y) px)
-          (mul (of_int button_b.add_x) py)
+          (mul (of_int button_b.move_y) offset_x)
+          (mul (of_int button_b.move_x) offset_y)
       ) in
-      let num_j = Int64.(
+      let press_b_numerator = Int64.(
         sub
-          (mul (of_int (-button_a.add_y)) px)
-          (mul (of_int (-button_a.add_x)) py)
+          (mul (of_int (-button_a.move_y)) offset_x)
+          (mul (of_int (-button_a.move_x)) offset_y)
       ) in
       
-      (* Check if solution exists *)
-      if Int64.(equal (rem num_i det) 0L && equal (rem num_j det) 0L) then
-        let i = Int64.div num_i det in
-        let j = Int64.div num_j det in
-        Int64.(add acc (add (mul i 3L) j))
+      (* Check if solution has integer press counts *)
+      if 
+        Int64.(equal (rem press_a_numerator determinant) 0L && 
+                equal (rem press_b_numerator determinant) 0L) 
+      then
+        let press_a = Int64.div press_a_numerator determinant 
+      in
+        let press_b = Int64.div press_b_numerator determinant 
+      in
+        (* Calculate total cost: press_a * 3 + press_b * 1 *)
+        Int64.(add total_tokens (add (mul press_a 3L) press_b))
       else
-        acc
+        total_tokens
   ) 0L
 
 
 
-
-
-(** Parse input string into list of machines
-    @param input Raw input string
-    @return List of parsed machine records *)
+  
+(** Parse input string into list of machines 
+    Format example:
+    Button A: X+94, Y+34
+    Button B: X+22, Y+67
+    Prize: X=8400, Y=5400
+    @param input Raw input string with machine configurations
+    @return List of parsed claw_machine records *)
 let parse input =
-    let parse_button line expected_button =
+  let parse_button line expected_button =
     (* Printf.printf "Debug: Parsing button line '%s' with pattern '%s'\n" line expected_button; *)
     let pattern = Printf.sprintf "^%s: X\\+\\([0-9]+\\), Y\\+\\([0-9]+\\)$" expected_button 
   in
     let regexp = Str.regexp pattern 
   in
-    if Str.string_match regexp line 0 then
-      let button = { 
-        add_x = int_of_string (Str.matched_group 1 line);
-        add_y = int_of_string (Str.matched_group 2 line) 
-      } 
-    in
-      (* Printf.printf "Debug: Successfully parsed button: x=%d, y=%d\n" button.add_x button.add_y; *)
-      button
+    if 
+      Str.string_match regexp line 0 
+    then
+      { 
+        move_x = int_of_string (Str.matched_group 1 line);
+        move_y = int_of_string (Str.matched_group 2 line) 
+      }
+    (* Printf.printf "Debug: Successfully parsed button: x=%d, y=%d\n" button.add_x button.add_y; *)  
     else
       failwith (Printf.sprintf "Invalid button format for %s: %s" expected_button line)
   in
@@ -124,43 +156,52 @@ let parse input =
   let parse_prize line =
     let pattern = "^Prize: X=\\([0-9]+\\), Y=\\([0-9]+\\)$" 
   in
-    let regexp = Str.regexp pattern in
-    if Str.string_match regexp line 0 then
-      { x = int_of_string (Str.matched_group 1 line);
-        y = int_of_string (Str.matched_group 2 line) }
+    let regexp = Str.regexp pattern 
+  in
+    if 
+      Str.string_match regexp line 0 
+    then
+      { 
+        target_x = int_of_string (Str.matched_group 1 line);
+        target_y = int_of_string (Str.matched_group 2 line) 
+      }
     else
       failwith (Printf.sprintf "Invalid prize format: %s" line)
   in
 
   input
   |> Str.split (Str.regexp "\n\n")
-  |> List.map (fun section ->
+  |> List.map (fun machine_config ->
       let lines = 
-        section
+        machine_config
         |> Str.split (Str.regexp "\n")
         |> List.map String.trim
         |> List.filter (fun s -> String.length s > 0)
       in
       match lines with
       | [button_a_line; button_b_line; prize_line] ->
-          { button_a = parse_button button_a_line "Button A";
+          { 
+            button_a = parse_button button_a_line "Button A";
             button_b = parse_button button_b_line "Button B";
-            prize = parse_prize prize_line }
+            prize = parse_prize prize_line 
+          }
       | _ -> 
-          Printf.printf "Debug: Found %d lines in section: %s\n" (List.length lines) section;
-          failwith (Printf.sprintf "Invalid section format: Expected exactly 3 lines, got %d" (List.length lines)))
+          Printf.printf "Debug: Found %d lines in section: %s\n" (List.length lines) machine_config;
+          failwith (Printf.sprintf "Invalid machine configuration: Expected 3 lines, got %d" 
+            (List.length lines)))
 
 
 
+            
 (** Main program entry point *)
 let () =
   let input = In_channel.input_all In_channel.stdin |> String.trim in
   let machines = parse input in
   
   let start_time = Unix.gettimeofday () in
-
-  machines |> part1 |> Printf.printf "Part 1: %d\n";
-  machines |> part2 |> Printf.printf "Part 2: %Ld\n";
-
+  
+  machines |> calculate_minimum_tokens |> Printf.printf "Part 1: %d\n";
+  machines |> calculate_large_coordinate_tokens |> Printf.printf "Part 2: %Ld\n";
+  
   Unix.gettimeofday () -. start_time
   |> Printf.printf "Elapsed time: %.4f seconds\n"

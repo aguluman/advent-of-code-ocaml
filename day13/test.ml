@@ -20,7 +20,7 @@ Prize: X=18641, Y=10279"
 let make_part1_test name expected_output input = 
   name >:: (fun _ -> 
     let machines = parse input in
-    assert_equal expected_output (part1 machines) ~printer:string_of_int)
+    assert_equal expected_output (calculate_minimum_tokens machines) ~printer:string_of_int)
 
 
 let part1_tests = [
