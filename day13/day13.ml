@@ -52,11 +52,16 @@ let calculate_minimum_tokens machines =
     let possible_costs =
       List.init 101 (fun press_a ->
         List.init 101 (fun press_b ->
-          let final_x = button_a.move_x * press_a + button_b.move_x * press_b in
-          let final_y = button_a.move_y * press_a + button_b.move_y * press_b in
-          if final_x = prize.target_x && final_y = prize.target_y then
+          let final_x = button_a.move_x * press_a + button_b.move_x * press_b 
+        in
+          let final_y = button_a.move_y * press_a + button_b.move_y * press_b 
+        in
+          if 
+            final_x = prize.target_x && final_y = prize.target_y 
+          then
             Some (press_a * 3 + press_b)  (* Cost calculation: A=3 tokens, B=1 token *)
-          else None))
+          else 
+            None))
       |> List.concat
       |> List.filter_map (fun x -> x)
     in
@@ -68,26 +73,29 @@ let calculate_minimum_tokens machines =
 
 
 (** Calculate minimum tokens for Part 2 using linear equation solving.
-  For large coordinates (offset by 10^13), we solve the system:
-  
-  press_a * button_a.move_x + press_b * button_b.move_x = prize.target_x + 10^13
-  press_a * button_a.move_y + press_b * button_b.move_y = prize.target_y + 10^13
-  
-  Using Cramer's rule where determinant is:
-  det = (button_a.move_x * button_b.move_y) - (button_b.move_x * button_a.move_y)
-  
-  @param machines List of claw machines to solve
-  @return Sum of minimum token costs (as Int64) for winnable prizes *)
+    For large coordinates (offset by 10^13), we solve the system:
+    
+    button_a.move_x * press_a + button_b.move_x * press_b = prize.target_x + 10^13
+    button_a.move_y * press_a + button_b.move_y * press_b = prize.target_y + 10^13
+    
+    Using Cramer's rule where determinant is:
+    det = (button_a.move_x * button_b.move_y) - (button_b.move_x * button_a.move_y)
+    
+    @param machines List of claw machines to solve
+    @return Sum of minimum token costs (as Int64) for winnable prizes *)
 let calculate_large_coordinate_tokens machines =
   machines
   |> List.fold_left (fun total_tokens { button_a; button_b; prize } ->
-    (* Offset prize coordinates by 10^13 *)
+    (* Step 1:  Offset prize coordinates by 10^13 *)
     let offset_x = Int64.(add (of_int prize.target_x) 10000000000000L) 
   in
     let offset_y = Int64.(add (of_int prize.target_y) 10000000000000L) 
   in
     
-    (* Calculate determinant using Cramer's rule:
+    (* Step 2: Calculate determinant using Cramer's rule
+       |button_a.move_x  button_b.move_x|
+       |button_a.move_y  button_b.move_y| *)
+    (* Cross-Multiply, then becomes :
        det = (button_a.move_x * button_b.move_y) - (button_b.move_x * button_a.move_y) *)
     let determinant = Int64.(
       sub 
@@ -96,25 +104,27 @@ let calculate_large_coordinate_tokens machines =
     ) 
   in  
     
-    (* If determinant is 0, system has no unique solution *)
+    (* Step 3: If determinant is 0, system has no unique solution *)
     if 
       Int64.equal determinant 0L 
     then
       total_tokens
     else
-      (* Calculate press counts using Cramer's rule *)
+      (* Step 4: Calculate press counts using Cramer's rule *)
       let press_a_numerator = Int64.(
         sub
           (mul (of_int button_b.move_y) offset_x)
           (mul (of_int button_b.move_x) offset_y)
-      ) in
+      ) 
+    in
       let press_b_numerator = Int64.(
         sub
           (mul (of_int (-button_a.move_y)) offset_x)
           (mul (of_int (-button_a.move_x)) offset_y)
-      ) in
+      ) 
+    in
       
-      (* Check if solution has integer press counts *)
+      (* Step 5: Check if solution has integer press counts *)
       if 
         Int64.(equal (rem press_a_numerator determinant) 0L && 
                 equal (rem press_b_numerator determinant) 0L) 
@@ -123,7 +133,7 @@ let calculate_large_coordinate_tokens machines =
       in
         let press_b = Int64.div press_b_numerator determinant 
       in
-        (* Calculate total cost: press_a * 3 + press_b * 1 *)
+        (* Step 6: Calculate total cost: press_a * 3 + press_b * 1 *)
         Int64.(add total_tokens (add (mul press_a 3L) press_b))
       else
         total_tokens
@@ -171,7 +181,7 @@ let parse input =
         target_y = int_of_string (Str.matched_group 2 line) 
       }
     else
-      failwith (Printf.sprintf "Invalid prize format: %s" line)
+      failwith (Printf.sprintf "Invalid prize format for Prize: %s" line)
   in
 
   input
@@ -191,7 +201,8 @@ let parse input =
             prize = parse_prize prize_line 
           }
       | _ -> 
-          Printf.printf "Debug: Found %d lines in section: %s\n" (List.length lines) machine_config;
+          Printf.printf "\nDebug: Found %d lines in section: %s\n" 
+            (List.length lines) machine_config;
           failwith (Printf.sprintf "Invalid machine configuration: Expected 3 lines, got %d" 
             (List.length lines)))
 
