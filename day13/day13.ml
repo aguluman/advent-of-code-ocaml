@@ -8,19 +8,19 @@
 
 
 
-(** Represents a button's movement pattern *)
+(** Represents a button's movement pattern. *)
 type claw_button = {
   move_x: int;  (* Units to move along X axis *)
   move_y: int   (* Units to move along Y axis *)
 }
 
-(** Represents prize coordinates *)
+(** Represents prize coordinates. *)
 type prize_location = {
   target_x: int;
   target_y: int
 }
 
-(** Represents a complete claw machine configuration *)
+(** Represents a complete claw machine configuration. *)
 type claw_machine = {
   button_a: claw_button;
   button_b: claw_button;
@@ -31,9 +31,9 @@ type claw_machine = {
 
 
 
-(** Find minimum value in a list safely
-    @param values Input list of token costs
-    @return Option containing minimum cost, None if no solution exists *)
+(** Find [minimum value] in a list safely.
+    @param values Input list of token costs.
+    @return Option containing minimum cost [Some] or [None] if no solution exists. *)
 let find_minimum_cost values = 
   match values with
   | [] -> None
@@ -42,10 +42,10 @@ let find_minimum_cost values =
 
 
 
-(** Calculate minimum tokens needed for Part 1
-    Tries combinations of button presses (max 100 each)
-    @param machines List of claw machines to solve
-    @return Sum of minimum token costs for winnable prizes *)
+(** Calculate minimum tokens needed for Part 1.
+    Tries combinations of button presses (max 100 each).
+    @param machines List of claw machines to solve.
+    @return Sum of minimum token costs for winnable prizes. *)
 let calculate_minimum_tokens machines =
   machines
   |> List.fold_left (fun total_tokens { button_a; button_b; prize } ->
@@ -67,13 +67,17 @@ let calculate_minimum_tokens machines =
   
 
 
-(** Calculate minimum tokens for Part 2 using linear equation solving
-    For large coordinates (offset by 10^13), we use determinants to solve
-    the system of linear equations:
-    press_a * button_a.x + press_b * button_b.x = prize.x + 10^13
-    press_a * button_a.y + press_b * button_b.y = prize.y + 10^13
-    @param machines List of claw machines to solve
-    @return Sum of minimum token costs (as Int64) for winnable prizes *)
+(** Calculate minimum tokens for Part 2 using linear equation solving.
+  For large coordinates (offset by 10^13), we solve the system:
+  
+  press_a * button_a.move_x + press_b * button_b.move_x = prize.target_x + 10^13
+  press_a * button_a.move_y + press_b * button_b.move_y = prize.target_y + 10^13
+  
+  Using Cramer's rule where determinant is:
+  det = (button_a.move_x * button_b.move_y) - (button_b.move_x * button_a.move_y)
+  
+  @param machines List of claw machines to solve
+  @return Sum of minimum token costs (as Int64) for winnable prizes *)
 let calculate_large_coordinate_tokens machines =
   machines
   |> List.fold_left (fun total_tokens { button_a; button_b; prize } ->
@@ -83,13 +87,14 @@ let calculate_large_coordinate_tokens machines =
     let offset_y = Int64.(add (of_int prize.target_y) 10000000000000L) 
   in
     
-    (* Calculate determinant for Cramer's rule
-        det = button_a.x * button_b.y - button_b.x * button_a.y *)
+    (* Calculate determinant using Cramer's rule:
+       det = (button_a.move_x * button_b.move_y) - (button_b.move_x * button_a.move_y) *)
     let determinant = Int64.(
       sub 
         (mul (of_int button_a.move_x) (of_int button_b.move_y))
         (mul (of_int button_b.move_x) (of_int button_a.move_y))
-    ) in
+    ) 
+  in  
     
     (* If determinant is 0, system has no unique solution *)
     if 
@@ -127,13 +132,13 @@ let calculate_large_coordinate_tokens machines =
 
 
   
-(** Parse input string into list of machines 
+(** Parse input string into list of machines. 
     Format example:
     Button A: X+94, Y+34
     Button B: X+22, Y+67
     Prize: X=8400, Y=5400
-    @param input Raw input string with machine configurations
-    @return List of parsed claw_machine records *)
+    @param input Raw input string with machine configurations.
+    @return List of parsed claw_machine records. *)
 let parse input =
   let parse_button line expected_button =
     (* Printf.printf "Debug: Parsing button line '%s' with pattern '%s'\n" line expected_button; *)
@@ -195,13 +200,15 @@ let parse input =
             
 (** Main program entry point *)
 let () =
-  let input = In_channel.input_all In_channel.stdin |> String.trim in
-  let machines = parse input in
+  In_channel.input_all In_channel.stdin
+  |> String.trim
+  |> parse
+  |> (fun machines ->
   
-  let start_time = Unix.gettimeofday () in
-  
-  machines |> calculate_minimum_tokens |> Printf.printf "Part 1: %d\n";
-  machines |> calculate_large_coordinate_tokens |> Printf.printf "Part 2: %Ld\n";
-  
-  Unix.gettimeofday () -. start_time
+      let start_time = Unix.gettimeofday () in
+      
+      machines |> calculate_minimum_tokens |> Printf.printf "Part 1: %d\n";
+      machines |> calculate_large_coordinate_tokens |> Printf.printf "Part 2: %Ld\n";
+      
+      Unix.gettimeofday () -. start_time)
   |> Printf.printf "Elapsed time: %.4f seconds\n"
