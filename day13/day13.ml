@@ -209,17 +209,3 @@ let parse input =
 
 
             
-(** Main program entry point *)
-let () =
-  In_channel.input_all In_channel.stdin
-  |> String.trim
-  |> parse
-  |> (fun machines ->
-  
-      let start_time = Unix.gettimeofday () in
-      
-      machines |> calculate_minimum_tokens |> Printf.printf "Part 1: %d\n";
-      machines |> calculate_large_coordinate_tokens |> Printf.printf "Part 2: %Ld\n";
-      
-      Unix.gettimeofday () -. start_time)
-  |> Printf.printf "Elapsed time: %.4f seconds\n"
