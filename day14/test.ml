@@ -20,7 +20,7 @@ let make_part1_test name expected_output (robots, width, height) =
       ~printer:string_of_int)
 
 let part1_tests = [
-  make_part1_test "example_part1" 12 (parse example_input, 7, 11);
+  make_part1_test "example_part1" 12 (example_input |> parse, 7, 11);
 ]
 
 let suite = "Day14 Test Suite" >::: [
@@ -29,13 +29,19 @@ let suite = "Day14 Test Suite" >::: [
 
 let () = run_test_tt_main suite
 
+
+
+
+
+(* Main entry for day 14 algorithm *)
 let () =
   let input = In_channel.input_all In_channel.stdin |> String.trim in
   let robots = parse input in
   let start_time = Unix.gettimeofday () in
 
-  let result = part1 (robots, 101, 103) in
-  result |> Printf.printf "Part 1: %d\n";
+  (robots, 101, 103)
+  |> part1
+  |> Printf.printf "Part 1: %d\n";
 
   let end_time = Unix.gettimeofday () in
   Printf.printf "Elapsed time: %.4f seconds\n" (end_time -. start_time);

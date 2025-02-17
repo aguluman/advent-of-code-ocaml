@@ -61,36 +61,49 @@ let part1 (security_robots, grid_width, grid_height) =
 
 let parse input =
   let parse_coords str =
-    let pattern = "^p=\\(-?[0-9]+\\),\\(-?[0-9]+\\) v=\\(-?[0-9]+\\),\\(-?[0-9]+\\)$" 
+    let pattern = 
+      "^p=\\(-?[0-9]+\\),\\(-?[0-9]+\\) v=\\(-?[0-9]+\\),\\(-?[0-9]+\\)$" 
   in
-    let regexp = Str.regexp pattern 
+    let regexp = 
+      Str.regexp pattern 
   in
     if 
       Str.string_match regexp str 0 
     then
-      let pos_x = int_of_string (Str.matched_group 1 str) in
-      let pos_y = int_of_string (Str.matched_group 2 str) in
-      let vel_x = int_of_string (Str.matched_group 3 str) in
-      let vel_y = int_of_string (Str.matched_group 4 str) in
-      { 
-        position = (pos_x, pos_y);
-        velocity = (vel_x, vel_y)
-      }
-    else
-      failwith 
-      (Printf.sprintf " Invalid robot configuration: '%s'. Expected format: p=x,y v=dx,dy " str)
+
+      try 
+        let pos_x = int_of_string (Str.matched_group 1 str) 
+      in
+        let pos_y = int_of_string (Str.matched_group 2 str) 
+      in
+        let vel_x = int_of_string (Str.matched_group 3 str) 
+      in
+        let vel_y = int_of_string (Str.matched_group 4 str) 
+      in
+        Some { 
+          position = (pos_x, pos_y);
+          velocity = (vel_x, vel_y)
+        }
+
+      with _ -> None
+    else None
+  in
+
+  let process_line i line =
+    match parse_coords (String.trim line) with
+    | Some robot -> robot
+    | None -> 
+        failwith (Printf.sprintf 
+          "Error at input line %d:
+           Invalid format in input line: '%s'
+           Expected format: 'p=x,y v=dx,dy' " 
+          (i + 1) line)
   in
 
   input
   |> String.trim
   |> String.split_on_char '\n'
   |> List.filter (fun line -> String.length (String.trim line) > 0)
-  |> List.mapi (fun i line ->
-      try 
-        parse_coords (String.trim line)
-      with e -> 
-        failwith (Printf.sprintf "Error parsing line %d: %s Error: %s" 
-                  (i + 1) line (Printexc.to_string e)))
-
+  |> List.mapi process_line
 
 
