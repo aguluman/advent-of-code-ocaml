@@ -9,6 +9,8 @@ type bathroom_quadrant =
   | Bottom_left
   | Bottom_right
 
+
+  
 let rec simulate_robot_movement seconds_remaining grid_width grid_height robot =
   if seconds_remaining = 0 then 
     robot
@@ -26,6 +28,9 @@ let rec simulate_robot_movement seconds_remaining grid_width grid_height robot =
       grid_width
       grid_height
       { robot with position = teleported_position }
+
+
+
 
 let part1 (security_robots, grid_width, grid_height) =
   let quadrant_counts =
@@ -58,6 +63,59 @@ let part1 (security_robots, grid_width, grid_height) =
 
   List.fold_left (fun acc (_, count) -> acc * count) 1 (count_occurrences quadrant_counts)
 
+
+
+
+module PosSet = Set.Make(struct 
+  type t = int * int 
+  let compare = compare 
+end)
+
+let part2 ((robots, width, height)) =
+  let rec search elapsed robots =
+    if elapsed >= 1000 then ()
+    else
+      let positions =
+        robots 
+        |> Array.map (fun robot -> robot.position) 
+        |> Array.to_list 
+        |> List.filter (fun (row, col) -> row >= 0 && row < height && col >= 0 && col < width) 
+        |> PosSet.of_list
+      in
+
+      let map = Array.make_matrix height width ' ' in
+      PosSet.iter (fun (row, col) -> 
+        if row >= 0 && row < height && col >= 0 && col < width then
+          map.(row).(col) <- '@'
+        else
+          Printf.printf "Warning: Out of bounds position (%d, %d)\n" row col
+      ) positions;
+
+      Printf.printf "t = %d\n" elapsed;
+      let buffer = Buffer.create (width * height) in
+      for row = 0 to height - 1 do
+        for col = 0 to width - 1 do
+          Buffer.add_char buffer map.(row).(col)
+        done;
+        Buffer.add_char buffer '\n'
+      done;
+      Buffer.output_buffer stdout buffer;
+
+      search (elapsed + 1) (Array.map (simulate_robot_movement 1 width height) robots)
+  in
+  search 0 (Array.of_list robots);
+
+  (* Optimized ASCII Art Cycle Calculation *)
+  let rec find_first_valid p =
+    let num_q = (81 - 30) + p * width in
+    if num_q mod height = 0 then (81 + p * width)
+    else find_first_valid (p + 1)
+  in
+  find_first_valid 0
+
+
+  
+  
 
 let parse input =
   let parse_coords str =

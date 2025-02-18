@@ -39,9 +39,9 @@ let () =
   let robots = parse input in
   let start_time = Unix.gettimeofday () in
 
-  (robots, 101, 103)
-  |> part1
-  |> Printf.printf "Part 1: %d\n";
+  (robots, 101, 103) |> part1 |> Printf.printf "Part 1: %d\n";
+
+  (robots, 101, 103) |> part2 |> Printf.printf "Part 2: %d\n";
 
   let end_time = Unix.gettimeofday () in
   Printf.printf "Elapsed time: %.4f seconds\n" (end_time -. start_time);
