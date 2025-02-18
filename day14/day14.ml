@@ -66,48 +66,53 @@ let part1 (security_robots, grid_width, grid_height) =
 
 
 
-let part2 ((robots, width, height)) =
-  let move_robot_once robot =
-    let (pos_x, pos_y) = robot.position in
-    let (vel_x, vel_y) = robot.velocity in
-    let new_x = (pos_x + vel_x + width) mod width in
-    let new_y = (pos_y + vel_y + height) mod height in
-    { robot with position = (new_x, new_y) }
-  in
-  let rec search elapsed robots =
-    if elapsed >= 1000 then
-      ()
-    else
-      let positions_hash = Hashtbl.create (List.length robots) in
-      List.iter (fun r -> Hashtbl.replace positions_hash r.position ()) robots;
-      let map =
-        Array.init height (fun row ->
-          Array.init width (fun col ->
-            if Hashtbl.mem positions_hash (col, row) then '@' else ' '))
-      in
-      Printf.printf "t = %d\n" elapsed;
-      map |> Array.map (fun row -> String.init width (fun i -> row.(i))) 
-          |> Array.to_list 
-          |> String.concat "\n" 
-          |> Printf.printf "%s\n";
-      Printf.printf "\n\n\n\n\n";
-      let new_robots = List.map move_robot_once robots in
-      search (elapsed + 1) new_robots
-  in
-  search 0 robots;
+module PosSet = Set.Make(struct 
+  type t = int * int 
+  let compare = compare 
+end)
 
-  (* ASCII art cycle detection *)
-  let solution = 
-    List.init 1001 (fun p -> p)
-    |> List.filter_map (fun p ->
-        let num_q = (81 - 30) + p * width in
-        if num_q mod height = 0 then
-          Some (81 + p * width)
+let part2 ((robots, width, height)) =
+  let rec search elapsed robots =
+    if elapsed >= 1000 then ()
+    else
+      let positions =
+        robots 
+        |> Array.map (fun robot -> robot.position) 
+        |> Array.to_list 
+        |> List.filter (fun (row, col) -> row >= 0 && row < height && col >= 0 && col < width) 
+        |> PosSet.of_list
+      in
+
+      let map = Array.make_matrix height width ' ' in
+      PosSet.iter (fun (row, col) -> 
+        if row >= 0 && row < height && col >= 0 && col < width then
+          map.(row).(col) <- '@'
         else
-          None)
-    |> List.hd
+          Printf.printf "Warning: Out of bounds position (%d, %d)\n" row col
+      ) positions;
+
+      Printf.printf "t = %d\n" elapsed;
+      let buffer = Buffer.create (width * height) in
+      for row = 0 to height - 1 do
+        for col = 0 to width - 1 do
+          Buffer.add_char buffer map.(row).(col)
+        done;
+        Buffer.add_char buffer '\n'
+      done;
+      Buffer.output_buffer stdout buffer;
+
+      search (elapsed + 1) (Array.map (simulate_robot_movement 1 width height) robots)
   in
-  solution
+  search 0 (Array.of_list robots);
+
+  (* Optimized ASCII Art Cycle Calculation *)
+  let rec find_first_valid p =
+    let num_q = (81 - 30) + p * width in
+    if num_q mod height = 0 then (81 + p * width)
+    else find_first_valid (p + 1)
+  in
+  find_first_valid 0
+
 
   
   
