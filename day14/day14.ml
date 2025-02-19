@@ -99,27 +99,21 @@ let part1 (robots, width, height) =
     (count_occurrences quadrant_counts)
 
 
-
-(** Set module for tracking unique positions *)
-module PosSet = Set.Make(struct 
-  type t = int * int 
-  let compare = compare 
-end)
+    
 
 
-(** Extracted helper function to filter valid positions and convert to PosSet *)
+(** Extracted helper function to filter valid positions *)
 let get_valid_positions robots width height =
   robots
   |> Array.map (fun r -> r.position)
   |> Array.to_list
   |> List.filter (fun (x, y) -> x >= 0 && x < width && y >= 0 && y < height)
-  |> PosSet.of_list
 
 
 (** Extracted helper function to create and populate the grid *)
 let create_grid positions width height default_char entity_char =
   let grid = Array.make_matrix height width default_char in
-  PosSet.iter (fun (x, y) -> grid.(y).(x) <- entity_char) positions;
+  List.iter (fun (x, y) -> grid.(y).(x) <- entity_char) positions;
   grid
 
 
