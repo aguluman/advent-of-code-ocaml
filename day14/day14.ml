@@ -68,8 +68,11 @@ let count_occurrences list =
     | [] -> accumulator
     | current :: remaining ->
         (* Count how many times current element appears in original list *)
-        let element_count = List.length (List.filter ((=) current) list) in
-        
+        let element_count = 
+          list 
+          |> List.filter ((=) current) 
+          |> List.length
+        in        
         (* Skip if we've already counted this element *)
         if List.mem_assoc current accumulator then 
           build_counts accumulator remaining
