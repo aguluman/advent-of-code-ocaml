@@ -1,0 +1,3 @@
+(executable
+ (name day15)
+ (libraries base stdio ounit2 str))
