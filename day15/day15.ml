@@ -1,155 +1,174 @@
-(** Types representing cells and movement directions *)
+(** Day 15: Warehouse Woes
+    Solution for simulating a robot pushing boxes in a warehouse where:
+    - Robot (@) can move in four directions (^ v < >)
+    - Boxes (O) can be pushed if space behind is empty
+    - Walls (#) block movement
+    - GPS coordinates are calculated as (100 * row + column)
+    - Part 1: Calculate sum of all boxes' GPS coordinates after moves *)
+
+(** Types representing warehouse contents *)
 type cell =
-  | Robot
-  | Box
-  | Wall
-  | Empty
+  | Robot    (** @ - The robot *)
+  | Box      (** O - Pushable box *)
+  | Wall     (** # - Immovable wall *)
+  | Empty    (** . - Empty space *)
 
-type dir =
-  | Up
-  | Left
-  | Down
-  | Right
+(** Movement directions for the robot *)
+type direction =
+  | Up       (** ^ - Move north *)
+  | Down     (** v - Move south *)
+  | Left     (** < - Move west *)
+  | Right    (** > - Move east *)
 
+(** Representation of the warehouse state *)
+type warehouse = {
+  cells: cell array array;    (** Grid of cells *)
+  robot_pos: int * int;       (** Current robot position (row, col) *)
+  width: int;                 (** Warehouse width *)
+  height: int                 (** Warehouse height *)
+}
 
-
-
-(** Move box recursively in a direction *)
-let move_with_box (map : cell array array) ri rj di dj =
-  let rec move_box_tail ri rj di dj cont =
-    let ni, nj = ri + di, rj + dj in
-    let h, w = Array.length map, Array.length map.(0) in
+(** Try to push a box in the given direction
+    @param warehouse Current warehouse state
+    @param row Box's current row
+    @param col Box's current column
+    @param delta_row Row movement (-1/0/1)
+    @param delta_col Column movement (-1/0/1)
+    @return true if box was pushed successfully *)
+let push_box warehouse row col delta_row delta_col =
+  let rec attempt_push current_row current_col cont =
+    let next_row = current_row + delta_row in
+    let next_col = current_col + delta_col in
     
-    if ni < 0 || ni >= h || nj < 0 || nj >= w then
+    (* Check bounds *)
+    if next_row < 0 || next_row >= warehouse.height ||
+       next_col < 0 || next_col >= warehouse.width then
       cont false
-    else match map.(ni).(nj) with
+    else match warehouse.cells.(next_row).(next_col) with
       | Wall -> cont false
       | Empty -> 
-          map.(ni).(nj) <- Box;
-          map.(ri).(rj) <- Empty;
+          warehouse.cells.(next_row).(next_col) <- Box;
+          warehouse.cells.(current_row).(current_col) <- Empty;
           cont true
       | Box ->
-          move_box_tail ni nj di dj (fun result ->
-            if result then begin
-              map.(ni).(nj) <- Box;
-              map.(ri).(rj) <- Empty;
+          attempt_push next_row next_col (fun success ->
+            if success then begin
+              warehouse.cells.(next_row).(next_col) <- Box;
+              warehouse.cells.(current_row).(current_col) <- Empty;
               cont true
             end else
               cont false)
       | Robot -> cont false
   in
-  move_box_tail ri rj di dj (fun x -> x)
+  attempt_push row col (fun x -> x)
 
-(** Move robot in a direction *)
-let move_robot map ri rj di dj =
-  let ni, nj = ri + di, rj + dj in
-  let h, w = Array.length map, Array.length map.(0) in
+(** Move robot in specified direction, handling box pushing
+    @param warehouse Current warehouse state
+    @param direction Movement direction
+    @return Updated warehouse state *)
+let move_robot warehouse direction =
+  let row, col = warehouse.robot_pos in
+  let delta_row, delta_col = match direction with
+    | Up -> (-1, 0)
+    | Down -> (1, 0)
+    | Left -> (0, -1)
+    | Right -> (0, 1)
+  in
+  let next_row = row + delta_row in
+  let next_col = col + delta_col in
   
-  if ni < 0 || ni >= h || nj < 0 || nj >= w then
-    (ri, rj)
-  else match map.(ni).(nj) with
-    | Wall -> (ri, rj)
+  if next_row < 0 || next_row >= warehouse.height ||
+     next_col < 0 || next_col >= warehouse.width then
+    warehouse
+  else match warehouse.cells.(next_row).(next_col) with
     | Empty ->
-        map.(ni).(nj) <- Robot;
-        map.(ri).(rj) <- Empty;
-        (ni, nj)
+        warehouse.cells.(row).(col) <- Empty;
+        warehouse.cells.(next_row).(next_col) <- Robot;
+        { warehouse with robot_pos = (next_row, next_col) }
     | Box ->
-        if move_with_box map ni nj di dj then begin
-          map.(ni).(nj) <- Robot;
-          map.(ri).(rj) <- Empty;
-          (ni, nj)
+        if push_box warehouse next_row next_col delta_row delta_col then begin
+          warehouse.cells.(row).(col) <- Empty;
+          warehouse.cells.(next_row).(next_col) <- Robot;
+          { warehouse with robot_pos = (next_row, next_col) }
         end else
-          (ri, rj)
-    | Robot -> (ri, rj)
+          warehouse
+    | Wall | Robot -> warehouse
 
-(** Find robot position in map *)
-let find_robot map =
-  let h, w = Array.length map, Array.length map.(0) in
-  let found = ref (-1, -1) in
-  for i = 0 to h - 1 do
-    for j = 0 to w - 1 do
-      if map.(i).(j) = Robot then
-        found := (i, j)
-    done
-  done;
-  !found
-
-(** Part 1 solution *)
-let part1 (map, moves) =
-  let ri, rj = ref (fst (find_robot map)), ref (snd (find_robot map)) in
-  
-  List.iter (fun move ->
-    let di, dj = match move with
-      | Up -> (-1, 0)
-      | Down -> (1, 0)
-      | Left -> (0, -1)
-      | Right -> (0, 1)
-    in
-    let new_ri, new_rj = move_robot map !ri !rj di dj in
-    ri := new_ri;
-    rj := new_rj
-  ) moves;
-  
+(** Calculate GPS coordinate sum for all boxes
+    @param warehouse Current warehouse state
+    @return Sum of GPS coordinates (100 * row + col) for all boxes *)
+let calculate_gps_sum warehouse =
   let sum = ref 0 in
-  for i = 0 to Array.length map - 1 do
-    for j = 0 to Array.length map.(0) - 1 do
-      if map.(i).(j) = Box then
-        sum := !sum + (100 * i + j)
+  for row = 0 to warehouse.height - 1 do
+    for col = 0 to warehouse.width - 1 do
+      if warehouse.cells.(row).(col) = Box then
+        sum := !sum + (100 * row + col)
     done
   done;
   !sum
 
-(** Parse map from string *)
+(** Parse warehouse map from string input
+    @param input String containing warehouse layout
+    @return Warehouse state with initial positions *)
 let parse_map input =
-  input
-  |> Str.split (Str.regexp "\n")
-  |> List.filter (fun s -> String.trim s <> "")
-  |> List.map (fun row ->
-      Array.init (String.length row) (fun i ->
-        match row.[i] with
-        | '@' -> Robot
+  let lines = String.split_on_char '\n' input |> List.filter (fun s -> s <> "") in
+  let height = List.length lines in
+  let width = String.length (List.hd lines) in
+  let cells = Array.make_matrix height width Empty in
+  let robot_pos = ref (0, 0) in
+  
+  List.iteri (fun row line ->
+    String.iteri (fun col ch ->
+      cells.(row).(col) <- match ch with
+        | '@' -> robot_pos := (row, col); Robot
         | 'O' -> Box
         | '#' -> Wall
         | '.' -> Empty
-        | c -> failwith (Printf.sprintf "Unexpected map char: %c" c)
-      )
-    )
-  |> Array.of_list
+        | c -> failwith (Printf.sprintf "Invalid character in map: %c" c)
+    ) line
+  ) lines;
+  
+  { cells; robot_pos = !robot_pos; width; height }
 
-(** Parse input into map and moves *)
+(** Parse complete input into warehouse and movement sequence
+    @param input Raw puzzle input string
+    @return Tuple of initial warehouse state and movement directions *)
 let parse input =
-  let trimmed = Str.global_replace (Str.regexp "\r") "" input in
-  let parts = Str.split_delim (Str.regexp "\n\n") trimmed in
+  let parts = String.split_on_char '\n' input 
+              |> List.filter (fun s -> s <> "") 
+              |> List.partition (fun s -> 
+                   String.length s > 0 && String.contains "#@O." s.[0]) in
   match parts with
-  | [map_part; moves_part] ->
-      let map = parse_map map_part in
-      let moves =
-        moves_part
-        |> Str.split (Str.regexp "\n")
-        |> List.filter (fun s -> String.trim s <> "")
-        |> List.map (fun line ->
-            String.to_seq line
-            |> List.of_seq
-            |> List.map (function
-              | '^' -> Up
-              | '<' -> Left
-              | 'v' -> Down
-              | '>' -> Right
-              | c -> failwith (Printf.sprintf "Unknown move: %c" c))
-          )
-        |> List.concat
-      in
-      (map, moves)
-  | _ -> failwith "Invalid input format. Expected map and moves separated by a blank line."
+  | (map_lines, move_lines) ->
+      let warehouse = parse_map (String.concat "\n" map_lines) in
+      let moves = String.concat "" move_lines
+                 |> String.to_seq
+                 |> List.of_seq
+                 |> List.filter_map (function
+                     | '^' -> Some Up
+                     | 'v' -> Some Down
+                     | '<' -> Some Left
+                     | '>' -> Some Right
+                     | _ -> None) in
+      (warehouse, moves)
 
+(** Solve part 1: simulate all moves and calculate final GPS sum
+    @param input Raw puzzle input
+    @return Sum of all boxes' GPS coordinates after moves *)
+let part1 (warehouse, moves) =
+  List.fold_left (fun state direction -> 
+    move_robot state direction
+  ) warehouse moves
+  |> calculate_gps_sum
 
-
+(** Main entry point *)
 let () =
   In_channel.input_all In_channel.stdin
   |> String.trim
   |> parse
-  |> (fun map ->
+  |> (fun input ->
       let start_time = Unix.gettimeofday () in
-      map |> part1 |> Printf.printf "Part 1: %d\n";
+      let result = part1 input in
+      Printf.printf "Part 1: %d\n" result;
       Unix.gettimeofday () -. start_time)
   |> Printf.printf "Elapsed time: %.4f seconds\n"
