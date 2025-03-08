@@ -124,8 +124,11 @@ let scaled_movement_tests = [
     Printf.printf "\nScaled map representation:\n%s\n" 
       (map |> Array.map (fun row ->
         row |> Array.map (function
-          | ScaledRobot -> "@" | BoxL -> "[" | BoxR -> "]"
-          | ScaledWall -> "#" | ScaledEmpty -> "."
+          | ScaledRobot -> "@" 
+          | BoxL -> "[" 
+          | BoxR -> "]"
+          | ScaledWall -> "#" 
+          | ScaledEmpty -> "."
         ) |> Array.to_list |> String.concat ""
       ) |> Array.to_list |> String.concat "\n"));
 
