@@ -128,18 +128,19 @@ let scaled_movement_tests = [
           | ScaledWall -> "#" | ScaledEmpty -> "."
         ) |> Array.to_list |> String.concat ""
       ) |> Array.to_list |> String.concat "\n"));
-  
+
+    
   (* Use direct string comparison for horizontal movements *)
-  make_direct_scale_up_test "move_left_scaled test" 
-    "#..OO@."
+  make_direct_scale_up_test "move_left_scaled test"
+    "######\n#....#\n#.OO@#\n######"
     move_left_scaled
-    "##...[][]@....";  (* Exact output format *)
-    
+    "############\n##........##\n##.[][]@..##\n############";
+
   make_direct_scale_up_test "move_right_scaled test"
-    "#.@OO.."
+    "#######\n#.....#\n#.OO@.#\n#######"
     move_right_scaled
-    "##...@[][]....";  (* Exact output format *)
-    
+    "##############\n##..........##\n##..[][].@..##\n##############";
+
   
   (* Update expectations for vertical movements *)
   make_scaled_move_test "move_up_scaled test"
