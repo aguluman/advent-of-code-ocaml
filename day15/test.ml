@@ -89,8 +89,11 @@ let make_direct_scale_up_test name input movement expected_str =
     let moved = movement map in
     let actual_str = moved |> Array.map (fun row ->
       row |> Array.map (function
-        | ScaledRobot -> "@" | BoxL -> "[" | BoxR -> "]"
-        | ScaledWall -> "#" | ScaledEmpty -> "."
+        | ScaledRobot -> "@" 
+        | BoxL -> "[" 
+        | BoxR -> "]"
+        | ScaledWall -> "#" 
+        | ScaledEmpty -> "."
       ) |> Array.to_list |> String.concat ""
     ) |> Array.to_list |> String.concat "\n" in
     assert_equal expected_str actual_str)
