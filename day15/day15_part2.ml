@@ -109,7 +109,7 @@ let rec push_left_scaled i j map =
     @return Some new_map if push successful, None if blocked
     @raise Assert_failure if box configuration is invalid
     @raise Failure if encountering invalid cell types
-    @see [scaled_cell] for the cell types in scaled mode *)
+  {[@see [scaled_cell] for the cell types in scaled mode]} *)
 let rec push_up_scaled i j map =
   match map.(i).(j) with
   | BoxL ->
@@ -282,6 +282,7 @@ let move_down_scaled map =
   let reverse = array_rev in
   map |> reverse |> move_up_scaled |> reverse
 
+  
 (* Scale up operation *)
 (** [scale_up map] converts a normal warehouse grid to a scaled version where each cell
     is expanded horizontally into two cells. The scaling follows these rules:

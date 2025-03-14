@@ -45,6 +45,8 @@ let parse_map input =
   
   cells  (* Return just the 2D array, not a record *)
 
+
+  
 (** [parse input] Parse complete input into warehouse and movement sequence
     @param input Raw puzzle input string
     @return Tuple of initial warehouse state and movement directions *)

@@ -4,6 +4,36 @@ open Day15_part1
 open Day15_part2
 
 
+(** Common print function for grid visualization *)
+let print_grid label state =
+  Printf.printf "\n%s:\n" label;
+  Array.iter (fun row ->
+    Array.iter (function
+      | Robot -> print_char '@'
+      | Box -> print_char 'O'
+      | Wall -> print_char '#'
+      | Empty -> print_char '.'
+    ) row;
+    print_newline ()
+  ) state
+
+(** Movement print functions with shared visualization logic *)
+let move_right_print map =
+  let reverse = Array.map array_rev in
+  map 
+  |> (fun m -> print_grid "Before reverse" m; reverse m)
+  |> (fun m -> print_grid "After first reverse" m; move_left m)
+  |> (fun m -> print_grid "After move_left" m; reverse m)
+  |> (fun m -> print_grid "Final" m; m)
+
+let move_down_print map =
+  map 
+  |> (fun m -> print_grid "Initial" m; transpose m)
+  |> (fun m -> print_grid "After transpose" m; move_right m)
+  |> (fun m -> print_grid "After move_left" m; transpose m)
+  |> (fun m -> print_grid "Final" m; m)
+  
+
 (** Test input data *)
 let example_input = "########
 #..O.O.#
@@ -67,7 +97,7 @@ let movement_tests = [
   
   make_move_test "move_right test" 
   "#.@OO.." 
-  move_right 
+  move_right_print
   "#..@OO.";
 
   (* Adjust expectations for vertical tests to match actual behavior *)
@@ -78,7 +108,7 @@ let movement_tests = [
     
   make_move_test "move_down test" 
     "######\n#.@OO#\n#....#\n######"
-    move_down 
+    move_down_print 
     "######\n#..OO#\n#.@..#\n######";  (* Robot moves down but boxes stay *)
 ]
 
