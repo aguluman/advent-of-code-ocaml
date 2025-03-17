@@ -335,36 +335,3 @@ let parse input =  (* Normalize line endings and trim *)
   in
   
   register, program
-
-
-
-(** Main Entry Point*)
-(** Main Entry Point for the chronospatial 3-bit computer simulation
-    
-    This function orchestrates the entire solution workflow:
-    1. Reads the input data from standard input
-    2. Parses it into register values and program instructions
-    3. Solves part 1 (determining program output with given register values)
-    4. Solves part 2 (finding the register A value that causes the program to output itself)
-    5. Measures and displays the execution time
-    
-    Input is expected to be provided via stdin in the format described in the parse function.
-    Results are printed to stdout, including:
-    - Part 1 result: A comma-separated string of output values
-    - Part 2 result: The numeric value needed for register A
-    - Performance metrics showing total execution time in seconds
-*)
-let () =
-    let input = In_channel.input_all In_channel.stdin 
-    |> String.trim 
-  in
-    let register, program = parse input 
-  in
-    let start_time = Unix.gettimeofday () 
-  in
-    part1 register program |> Printf.printf "Part 1: %s\n";
-    part2 register program |> Int64.to_int |> Printf.printf "Part 2: %d\n";
-    
-    let elapsed = Unix.gettimeofday () -. start_time 
-  in
-    Printf.printf "Elapsed time: %.4f seconds\n" elapsed
