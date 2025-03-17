@@ -8,6 +8,20 @@
     @param register_b  Register B - Used for bitwise operations and storing intermediate results
     @param register_c  Register C - Auxiliary register typically used with register B for operations
 *)
+
+
+(**
+  // 0 adv: A <- A / 2^■
+  // 1 bxl: B <- B xor ■
+  // 2 bst: B <- ■ % 8
+  // 3 jnz: A ≠ 0 ⇒ ip <- ■
+  // 4 bxc: B <- B xor C
+  // 5 out: ■ % 8
+  // 6 bdv: B <- A / 2^■
+  // 7 cdv: C <- A / 2^■
+*)
+
+
 type cpu_registers = {
   accumulator : int64;   
   register_b : int64;   
@@ -187,8 +201,8 @@ let output_on_halt state =
     @return          A string of comma-separated values representing the program's output
 *)
 let part1 register program =
-  let out = execute register program output_on_halt in
-  out 
+  let output = execute register program output_on_halt in
+  output 
   |> Array.map string_of_int 
   |> Array.to_list 
   |> String.concat ","
@@ -216,44 +230,52 @@ let part1 register program =
     @raise Failure   If no solution can be found
 *)
 let part2 register program =  (* A helper to compare two int arrays by value *)
-  let array_equal eq a b =
-    if Array.length a <> Array.length b then false
+    let array_equal element_comparator first_array second_array =
+    if Array.length first_array <> Array.length second_array then 
+      false
     else
-      let rec aux i =
-        if i = Array.length a then true
-        else if not (eq a.(i) b.(i)) then false
-        else aux (i + 1)
+      let rec compare_elements_from index =
+        if index = Array.length first_array then 
+          true
+        else if not (element_comparator first_array.(index) second_array.(index)) then 
+          false
+        else 
+          compare_elements_from (index + 1)
       in
-      aux 0
+      compare_elements_from 0
   in
 
   (* OCaml equivalent of F# List.tryPick *)
-  let rec find_map f = function
+    let rec find_map mapping_function = function
     | [] -> None
-    | x :: xs -> 
-        match f x with
-        | Some _ as res -> res
-        | None -> find_map f xs
+    | current_element :: remaining_elements -> 
+        match mapping_function current_element with
+        | Some _ as result -> result
+        | None -> find_map mapping_function remaining_elements
   in
 
-  let rec find i a =
-    if i = 0 then
-      Some a
+    let rec find_register_value remaining_positions accumulated_value =
+    if remaining_positions = 0 then
+      Some accumulated_value
     else
       find_map
-        (fun j ->
-          let a' = Int64.add (Int64.mul a 8L) (Int64.of_int j) in
-          let out = execute { register with accumulator = a' } program output_on_halt in
-          let slice_len = Array.length program - (i - 1) in
-          let remainder = Array.sub program (i - 1) slice_len in
-          if array_equal ( = ) out remainder then find (i - 1) a' else None
+        (fun digit ->
+          let new_value = Int64.add (Int64.mul accumulated_value 8L) (Int64.of_int digit) in
+          let output = execute { register with accumulator = new_value } program output_on_halt in
+          let slice_len = Array.length program - (remaining_positions - 1) in
+          let program_slice = Array.sub program (remaining_positions - 1) slice_len in
+          if array_equal ( = ) output program_slice then 
+            find_register_value (remaining_positions - 1) new_value 
+          else 
+            None
         )
         [0; 1; 2; 3; 4; 5; 6; 7]
   in
 
-  match find (Array.length program) 0L with
+  match find_register_value (Array.length program) 0L with
   | Some result -> result
   | None -> failwith "No solution found"
+
 
 
 (** Parse input for the chronospatial 3-bit computer
