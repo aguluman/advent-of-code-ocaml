@@ -10,12 +10,14 @@
  * Part 2: Count tiles that are part of any minimum-score path
  *)
 
+
 (** Direction that a reindeer can face in the maze *)
 type direction =
   | East
   | North
   | West
   | South
+
 
 (** Rotate a direction 90 degrees counterclockwise *)
 let rotate_counterclockwise direction =
@@ -25,6 +27,7 @@ let rotate_counterclockwise direction =
   | West -> South
   | South -> East
 
+
 (** Rotate a direction 90 degrees clockwise *)
 let rotate_clockwise direction =
   match direction with
@@ -33,12 +36,14 @@ let rotate_clockwise direction =
   | West -> North
   | North -> East
 
+
 (** A position in the maze with coordinates and facing direction *)
 type position = {
   row: int;
   column: int;
   facing: direction;
 }
+
 
 (** Move forward one step in the current facing direction if possible
     @param pos Current position
@@ -65,6 +70,7 @@ let move_forward pos maze =
   else
     None
 
+
 (** Get positions after rotating in both possible directions
     @param pos Current position
     @return List of positions after rotating clockwise and counterclockwise
@@ -75,12 +81,14 @@ let rotate_positions pos =
     { pos with facing = rotate_clockwise pos.facing };
   ]
 
+
 (** An edge in the movement graph connecting two positions with a cost *)
 type edge = {
   from_pos: position;
   to_pos: position;
   cost: int;
 }
+
 
 (** Custom map implementation for positions *)
 module PositionMap = Map.Make(struct
@@ -93,6 +101,7 @@ module PositionMap = Map.Make(struct
     compare p1.facing p2.facing
 end)
 
+
 (** Group elements by a key function
     @param key_fn Function to extract the key from an element
     @param list List of elements to group
@@ -101,9 +110,13 @@ end)
 let group_by key_fn list =
   List.fold_left (fun acc elem ->
     let key = key_fn elem in
-    let data = try PositionMap.find key acc with Not_found -> [] in
+    let data = 
+      try PositionMap.find key acc 
+      with Not_found -> [] 
+    in
     PositionMap.add key (elem :: data) acc
   ) PositionMap.empty list
+
 
 (** Priority queue implementation for Dijkstra's algorithm *)
 module PriorityQueue = struct
@@ -181,12 +194,13 @@ module PriorityQueue = struct
     )
 end
 
+
 (** 
- * Dijkstra's algorithm to find shortest paths from a source position
- * @param start Starting position
- * @param edges List of all possible moves in the maze
- * @return Map from positions to their minimum distance from start
- *)
+  Dijkstra's algorithm to find shortest paths from a source position
+  @param start Starting position
+  @param edges List of all possible moves in the maze
+  @return Map from positions to their minimum distance from start
+*)
 let find_shortest_paths start edges =
   (* Group edges by their origin position *)
   let adjacent_edges = group_by (fun e -> e.from_pos) edges in
@@ -208,13 +222,22 @@ let find_shortest_paths start edges =
         if dist > current_dist then process_queue ()
         else (
           (* Process all outgoing edges from this position *)
-          let pos_edges = try PositionMap.find pos adjacent_edges with Not_found -> [] in
+          let pos_edges = 
+            try 
+              PositionMap.find pos adjacent_edges 
+            with 
+              Not_found -> [] 
+          in
           List.iter (fun edge ->
-            let new_dist = dist + edge.cost in
-            let target_pos = edge.to_pos in
+            let new_dist = dist + edge.cost 
+          in
+            let target_pos = edge.to_pos 
+          in
             let existing_dist = 
-              try Some (PositionMap.find target_pos !distances) 
-              with Not_found -> None 
+              try 
+                Some (PositionMap.find target_pos !distances) 
+              with 
+                Not_found -> None 
             in
             match existing_dist with
             | Some old_dist when new_dist < old_dist ->
@@ -231,6 +254,7 @@ let find_shortest_paths start edges =
   
   process_queue ()
 
+
 (** Creates pairs of elements from two lists
     @param list1 First list
     @param list2 Second list
@@ -239,19 +263,21 @@ let find_shortest_paths start edges =
 let all_pairs list1 list2 =
   List.concat_map (fun x -> List.map (fun y -> (x, y)) list2) list1
 
+
 (** 
- * Generate all possible movement edges in the maze
- * @param maze The maze layout
- * @return List of edges representing all possible moves
- *)
+ Generate all possible movement edges in the maze
+ @param maze The maze layout
+ @return List of edges representing all possible moves
+*)
 let generate_movement_edges maze =
   (* Generate coordinates for every position in the maze *)
   all_pairs (List.init (Array.length maze) (fun i -> i))
            (List.init (Array.length maze.(0)) (fun j -> j))
   |> List.concat_map (fun (row, col) ->
       (* Skip walls *)
-      if maze.(row).(col) = '#' then
-        []
+      if maze.(row).(col) = '#' 
+        then
+          []
       else
         (* Create edges for each direction at this position *)
         [East; North; West; South]
@@ -265,7 +291,10 @@ let generate_movement_edges maze =
             (* Forward movement edge (cost 1) *)
             let forward_edge =
               match move_forward pos maze with
-              | Some next_pos -> [{ from_pos = pos; to_pos = next_pos; cost = 1 }]
+              | Some next_pos -> [{ 
+                  from_pos = pos; 
+                  to_pos = next_pos; 
+                  cost = 1 }]
               | None -> []
             in
             
@@ -283,33 +312,47 @@ let generate_movement_edges maze =
           )
     )
 
+
 (** 
- * Find coordinates of a specific character in the maze
- * @param maze The maze layout
- * @param target_char Character to find
- * @return Some (row, col) if found, None otherwise
- *)
+ Find coordinates of a specific character in the maze
+ @param maze The maze layout
+ @param target_char Character to find
+ @return Some (row, col) if found, None otherwise
+*)
 let find_character_position maze target_char =
-  let height = Array.length maze in
-  if height = 0 then None
+  let height = Array.length maze 
+in
+  if height = 0 
+    then 
+      None
   else 
-    let width = Array.length maze.(0) in
+    let width = Array.length maze.(0) 
+  in
     let rec scan_maze row col =
-      if row >= height then None
-      else if col >= width then scan_maze (row+1) 0
-      else if maze.(row).(col) = target_char then Some (row, col)
+      if row >= height 
+        then 
+          None
+      else if 
+        col >= width 
+        then 
+          scan_maze (row+1) 0
+      else if 
+        maze.(row).(col) = target_char 
+        then 
+          Some (row, col)
       else scan_maze row (col+1)
     in
     scan_maze 0 0
 
+
 (** 
- * Solve part 1: Find the minimum score to reach the end
- * @param maze The maze layout
- * @return Minimum possible score
+  Solve part 1: Find the minimum score to reach the end
+  @param maze The maze layout
+  @return Minimum possible score
  *)
 let solve_part1 maze =
-  let movement_edges = generate_movement_edges maze in
-  
+  let movement_edges = generate_movement_edges maze 
+in
   (* Find start and end positions *)
   let start_row, start_col = 
     match find_character_position maze 'S' with
@@ -331,8 +374,8 @@ let solve_part1 maze =
   } in
   
   (* Calculate shortest paths from start *)
-  let distances = find_shortest_paths start_pos movement_edges in
-  
+  let distances = find_shortest_paths start_pos movement_edges 
+in
   (* Find minimum distance to end in any direction *)
   [East; North; West; South]
   |> List.map (fun dir ->
@@ -340,15 +383,19 @@ let solve_part1 maze =
         row = end_row;
         column = end_col;
         facing = dir;
-      } in
-      try PositionMap.find end_pos distances
-      with Not_found -> max_int)
+      }
+    in
+      try
+        PositionMap.find end_pos distances
+      with
+        Not_found -> max_int)
   |> List.fold_left min max_int
 
+
 (** 
- * Solve part 2: Count tiles that are part of any minimum-score path
- * @param maze The maze layout
- * @return Number of tiles on optimal paths
+ Solve part 2: Count tiles that are part of any minimum-score path
+ @param maze The maze layout
+ @return Number of tiles on optimal paths
  *)
 let solve_part2 maze =
   let movement_edges = generate_movement_edges maze in
@@ -371,17 +418,29 @@ let solve_part2 maze =
     row = start_row;
     column = start_col;
     facing = East;
-  } in
+  } 
+  in
   
   (* Calculate shortest paths from start *)
-  let distances = find_shortest_paths start_pos movement_edges in
-  
+  let distances = find_shortest_paths start_pos movement_edges 
+in
   (* Find optimal ending direction and the minimum score *)
   let min_score, best_direction = 
     List.fold_left (fun (min_dist, min_dir) dir ->
-      let end_pos = { row = end_row; column = end_col; facing = dir } in
-      let dist = try PositionMap.find end_pos distances with Not_found -> max_int in
-      if dist < min_dist then (dist, dir) else (min_dist, min_dir)
+      let end_pos = { 
+        row = end_row; 
+        column = end_col; 
+        facing = dir 
+      } in
+      let dist = 
+        try 
+          PositionMap.find end_pos distances 
+        with 
+          Not_found -> max_int 
+    in
+      if dist < min_dist 
+        then (dist, dir) 
+      else (min_dist, min_dir)
     ) (max_int, East) [East; North; West; South]
   in
   
@@ -394,19 +453,22 @@ let solve_part2 maze =
   
   (* Create reversed edges for backward path calculation *)
   let reversed_edges = 
-    List.map (fun edge -> 
-      { from_pos = edge.to_pos; to_pos = edge.from_pos; cost = edge.cost }
-    ) movement_edges 
+    List.map (fun edge -> { 
+      from_pos = edge.to_pos; 
+      to_pos = edge.from_pos; 
+      cost = edge.cost 
+    }) movement_edges 
   in
   
   (* Calculate paths from end back to start *)
-  let reverse_distances = find_shortest_paths optimal_end_pos reversed_edges in
-  
+  let reverse_distances = find_shortest_paths optimal_end_pos reversed_edges 
+in
   (* Cache for positions on optimal path to avoid redundant checks *)
-  let optimal_path_cache = Hashtbl.create 1024 in
-  
+  let optimal_path_cache = Hashtbl.create 1024 
+in  
   (* Count tiles on the shortest path *)
-  let tile_count = ref 0 in
+  let tile_count = ref 0 
+in
   for row = 0 to Array.length maze - 1 do
     for col = 0 to Array.length maze.(0) - 1 do
       (* Skip walls *)
@@ -416,13 +478,31 @@ let solve_part2 maze =
           incr tile_count
         else (
           (* Check if any direction at this position is on an optimal path *)
-          let on_optimal_path = ref false in
+          let on_optimal_path = ref false 
+        in
           List.iter (fun dir ->
             if not !on_optimal_path then (
-              let pos = { row = row; column = col; facing = dir } in
-              let forward_dist = try Some (PositionMap.find pos distances) with Not_found -> None in
-              let backward_dist = try Some (PositionMap.find pos reverse_distances) with Not_found -> None in
-              
+              let pos = { 
+                row = row; 
+                column = col; 
+                facing = dir 
+              } 
+            in
+
+              let forward_dist = 
+              try 
+                Some (PositionMap.find pos distances) 
+              with 
+                Not_found -> None 
+            in
+
+              let backward_dist = 
+              try 
+                Some (PositionMap.find pos reverse_distances) 
+              with 
+                Not_found -> None 
+            in
+            
               (* If sum of forward and backward distances equals the minimum score, it's on an optimal path *)
               match forward_dist, backward_dist with
               | Some fd, Some bd when fd + bd = min_score ->
@@ -438,10 +518,12 @@ let solve_part2 maze =
   done;
   !tile_count
 
+
+
 (** 
- * Parse input string into 2D maze array
- * @param input Raw input string
- * @return 2D array of characters representing the maze
+ Parse input string into 2D maze array
+ @param input Raw input string
+ @return 2D array of characters representing the maze
  *)
 let parse_input input =
   input 
