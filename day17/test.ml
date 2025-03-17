@@ -92,10 +92,12 @@ let part1_tests = [
   make_part1_test "example_1_part1" example_input_1 "4,6,3,5,6,3,5,2,1,0";
 ]
 
+
 (** Part 2 test cases *)
 let part2_tests = [
   make_part2_test "example_2_part2" example_input_2 117440;
 ]
+
 
 (** Register/CPU state inspection *)
 let register_inspection =
@@ -110,9 +112,46 @@ let register_inspection =
     Array.iter (fun op -> Printf.printf "%d " op) program;
     Printf.printf "\n")
 
-(** Complete test suite *)
+
+(** Additional instruction tests based on challenge descriptions *)
+let instruction_tests = [
+  (* adv instruction divides register A by 2^operand *)
+  make_register_value_test "adv instruction divides register A by 2^operand" 
+    16 0 0 [0; 2] 4 0 0;  (* A = 16 / 2^2 = 16/4 = 4 *)
+  
+  (* bxl instruction performs XOR on register B with literal *)
+  make_register_value_test "bxl instruction performs XOR on register B with literal" 
+    0 10 0 [1; 7] 0 (10 lxor 7) 0;
+  
+  (* bst instruction sets register B to operand mod 8 *)
+  make_register_value_test "bst instruction sets register B to operand mod 8" 
+    0 0 0 [2; 3] 0 3 0;  (* 3 % 8 = 3 *)
+  
+  (* jnz instruction jumps when A is not zero *)
+  make_register_value_test "jnz instruction jumps when A is not zero" 
+    1 0 0 [3; 2; 5; 0; 2; 3] 1 3 0;  (* Should jump to the "bst" and set B=3 *)
+  
+  (* jnz instruction doesn't jump when A is zero *)
+  make_register_value_test "jnz instruction doesn't jump when A is zero" 
+    0 0 0 [3; 2; 2; 3] 0 3 0;  (* Should execute the "bst" after jnz and set B=3 *)
+  
+  (* bxc instruction performs XOR on register B with register C *)
+  make_register_value_test "bxc instruction performs XOR on register B with register C" 
+    0 10 7 [4; 0] 0 (10 lxor 7) 7;
+  
+  (* bdv instruction divides A by 2^operand and stores result in B *)
+  make_register_value_test "bdv instruction divides A by 2^operand and stores in B" 
+    16 0 0 [6; 2] 16 4 0;  (* B = 16 / 2^2 = 16/4 = 4, A remains 16 *)
+  
+  (* cdv instruction divides A by 2^operand and stores result in C *)
+  make_register_value_test "cdv instruction divides A by 2^operand and stores in C" 
+    16 0 0 [7; 2] 16 0 4;  (* C = 16 / 2^2 = 16/4 = 4, A remains 16 *)
+]
+
+(** Complete test suite - updated with instruction tests *)
 let suite = "Day17 Test Suite" >::: [
   "Register Operation Tests" >::: register_tests;
+  "Instruction Tests" >::: instruction_tests;
   "Part 1 Tests" >::: part1_tests;
   "Part 2 Tests" >::: part2_tests;
   register_inspection;
