@@ -87,31 +87,6 @@ let register_tests = [
 ]
 
 
-(** Part 1 test cases *)
-let part1_tests = [
-  make_part1_test "example_1_part1" example_input_1 "4,6,3,5,6,3,5,2,1,0";
-]
-
-
-(** Part 2 test cases *)
-let part2_tests = [
-  make_part2_test "example_2_part2" example_input_2 117440;
-]
-
-
-(** Register/CPU state inspection *)
-let register_inspection =
-  "register_inspection" >:: (fun _ ->
-    let register, program = parse example_input_1 in
-    Printf.printf "\nInitial register state:\n";
-    Printf.printf "  Accumulator: %Ld\n" register.accumulator;
-    Printf.printf "  Register B: %Ld\n" register.register_b;
-    Printf.printf "  Register C: %Ld\n" register.register_c;
-    Printf.printf "Program length: %d\n" (Array.length program);
-    Printf.printf "Program content: ";
-    Array.iter (fun op -> Printf.printf "%d " op) program;
-    Printf.printf "\n")
-
 
 (** Additional instruction tests based on challenge descriptions *)
 let instruction_tests = [
@@ -147,6 +122,34 @@ let instruction_tests = [
   make_register_value_test "cdv instruction divides A by 2^operand and stores in C" 
     16 0 0 [7; 2] 16 0 4;  (* C = 16 / 2^2 = 16/4 = 4, A remains 16 *)
 ]
+
+
+(** Part 1 test cases *)
+let part1_tests = [
+  make_part1_test "example_1_part1" example_input_1 "4,6,3,5,6,3,5,2,1,0";
+]
+
+
+(** Part 2 test cases *)
+let part2_tests = [
+  make_part2_test "example_2_part2" example_input_2 117440;
+]
+
+
+(** Register/CPU state inspection *)
+let register_inspection =
+  "register_inspection" >:: (fun _ ->
+    let register, program = parse example_input_1 in
+    Printf.printf "\nInitial register state:\n";
+    Printf.printf "  Accumulator: %Ld\n" register.accumulator;
+    Printf.printf "  Register B: %Ld\n" register.register_b;
+    Printf.printf "  Register C: %Ld\n" register.register_c;
+    Printf.printf "Program length: %d\n" (Array.length program);
+    Printf.printf "Program content: ";
+    Array.iter (fun op -> Printf.printf "%d " op) program;
+    Printf.printf "\n")
+
+
 
 (** Complete test suite - updated with instruction tests *)
 let suite = "Day17 Test Suite" >::: [
@@ -188,7 +191,7 @@ let () =
     part2 register program |> Int64.to_int |> Printf.printf "Part 2: %d\n";
     
     Unix.gettimeofday () -. start_time
-    |> Printf.printf "Elapsed time: %.4f seconds\n"
+    |> Printf.printf "Elapsed time: %.8f seconds\n"
     
   with
   | Failure msg -> Printf.printf "Error: %s\n" msg
