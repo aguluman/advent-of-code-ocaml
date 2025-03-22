@@ -12,31 +12,36 @@
     @see <https://adventofcode.com/2024/day/18> Problem Description
 *)
 
+
 (** [IntPair] defines a comparable pair of integers for use in maps and sets. *)
 module IntPair = struct
   type t = int * int
   let compare = compare
 end
 
+
+
 (** [PairMap] provides map operations for integer coordinate pairs. *)
 module PairMap = Map.Make(IntPair)
 
 
 
-(** [create_memory_grid n positions] creates a grid representation of memory space.
+(** [create_memory_grid grid_size positions] creates a grid representation of memory space.
     The grid is a boolean matrix where true indicates corrupted memory (bytes that
     have fallen) and false indicates safe memory locations.
     
-    @param n Size of the grid (n+1 x n+1)
+    @param grid_size Size of the grid (grid_size+1 x grid_size+1)
     @param positions List of (x,y) coordinates where bytes have fallen
     @return A boolean matrix where true indicates corrupted memory
 *)
-let create_memory_grid n positions =
-  let grid = Array.make_matrix (n+1) (n+1) false in
-  List.iter (fun (x, y) -> grid.(y).(x) <- true) positions;
+let create_memory_grid grid_size positions =
+  let grid = Array.make_matrix (grid_size+1) (grid_size+1) false in
+  List.iter (fun (pos_x, pos_y) -> grid.(pos_y).(pos_x) <- true) positions;
   grid
 
-(** [find_shortest_path n positions] finds the shortest path from (0,0) to (n,n)
+
+
+(** [find_shortest_path grid_size positions] finds the shortest path from (0,0) to (grid_size,grid_size)
     through a memory space with corrupted positions.
     
     The function uses Breadth-First Search to find the shortest path:
@@ -45,13 +50,13 @@ let create_memory_grid n positions =
     3. For each reachable uncorrupted position, record distance
     4. Continue until destination is reached or all reachable positions are explored
     
-    @param n Size of the memory grid (n+1 x n+1)
+    @param grid_size Size of the memory grid (grid_size+1 x grid_size+1)
     @param positions List of (x,y) coordinates of corrupted memory
     @return Some distance if a path exists, None if destination is unreachable
     @raise Invalid_argument if grid parameters are invalid
 *)
-let find_shortest_path n positions =
-  let grid = create_memory_grid n positions in
+let find_shortest_path grid_size positions =
+  let grid = create_memory_grid grid_size positions in
   
   (* Using a queue for BFS efficiency *)
   let queue = Queue.create () in
@@ -66,17 +71,17 @@ let find_shortest_path n positions =
     if Queue.is_empty queue then
       !distance
     else
-      let (x, y) = Queue.take queue in
-      let current_dist = PairMap.find (x, y) !distance in
+      let (pos_x, pos_y) = Queue.take queue in
+      let current_dist = PairMap.find (pos_x, pos_y) !distance in
       
-      List.iter (fun (dx, dy) ->
-        let nx, ny = x + dx, y + dy in
-        if nx >= 0 && nx <= n && ny >= 0 && ny <= n &&
-           not grid.(ny).(nx) &&
-           not (PairMap.mem (nx, ny) !distance)
+      List.iter (fun (dir_x, dir_y) ->
+        let next_x, next_y = pos_x + dir_x, pos_y + dir_y in
+        if next_x >= 0 && next_x <= grid_size && next_y >= 0 && next_y <= grid_size &&
+           not grid.(next_y).(next_x) &&
+           not (PairMap.mem (next_x, next_y) !distance)
         then begin
-          distance := PairMap.add (nx, ny) (current_dist + 1) !distance;
-          Queue.add (nx, ny) queue
+          distance := PairMap.add (next_x, next_y) (current_dist + 1) !distance;
+          Queue.add (next_x, next_y) queue
         end
       ) directions;
       
@@ -84,28 +89,32 @@ let find_shortest_path n positions =
   in
   
   let final_distance = process_queue () in
-  PairMap.find_opt (n, n) final_distance
+  PairMap.find_opt (grid_size, grid_size) final_distance
 
-(** [calculate_min_steps n bytes positions] determines the minimum steps needed
+
+
+(** [calculate_min_steps grid_size bytes positions] determines the minimum steps needed
     to reach the exit after a specific number of bytes have fallen.
     
-    @param n Size of the memory grid (n+1 x n+1)
+    @param grid_size Size of the memory grid (grid_size+1 x grid_size+1)
     @param bytes Number of bytes to consider from the sequence
     @param positions Sequence of (x,y) coordinates where bytes will fall
     @return The minimum number of steps to reach the exit
     @raise Failure if no path to the exit exists
 *)
-let calculate_min_steps (n, bytes, positions) =
+let calculate_min_steps (grid_size, bytes, positions) =
   let positions_list = 
     positions
     |> Seq.take bytes
     |> List.of_seq
   in
-  match find_shortest_path n positions_list with
+  match find_shortest_path grid_size positions_list with
   | Some value -> value
   | None -> failwith "No path to exit exists"
 
-(** [find_blocking_byte n positions] finds the first byte that makes the exit
+
+
+(** [find_blocking_byte grid_size positions] finds the first byte that makes the exit
     unreachable from the starting position.
     
     The function uses binary search to efficiently find the precise byte:
@@ -113,11 +122,11 @@ let calculate_min_steps (n, bytes, positions) =
     2. Use binary search to narrow down the critical position
     3. When found, return the exact byte coordinates
     
-    @param n Size of the memory grid (n+1 x n+1)
+    @param grid_size Size of the memory grid (grid_size+1 x grid_size+1)
     @param positions Sequence of (x,y) coordinates where bytes will fall
     @return The (x,y) coordinates of the first byte that blocks all paths
 *)
-let find_blocking_byte (n, positions) =
+let find_blocking_byte (grid_size, positions) =
   let positions_list = List.of_seq positions in
   
   (* Using Array.sub for more efficient slicing *)
@@ -129,29 +138,31 @@ let find_blocking_byte (n, positions) =
   in
   
   (* Binary search with early exit optimization *)
-  let rec bisect ok ng =
-    if ok + 1 = ng then 
-      ng
+  let rec bisect lower_bound upper_bound =
+    if lower_bound + 1 = upper_bound then 
+      upper_bound
     else 
-      let mid = (ok + ng) / 2 in
+      let middle_index = (lower_bound + upper_bound) / 2 in
       
-      match find_shortest_path n (take (mid + 1)) with
+      match find_shortest_path grid_size (take (middle_index + 1)) with
       | Some _ -> 
           (* Path exists, try with more bytes *)
-          bisect mid ng
+          bisect middle_index upper_bound
       | None -> 
-          (* No path exists with mid+1 bytes *)
-          match find_shortest_path n (take mid) with
+          (* No path exists with middle_index+1 bytes *)
+          match find_shortest_path grid_size (take middle_index) with
           | Some _ -> 
               (* Found exact cutoff point *)
-              mid
+              middle_index
           | None ->
               (* Keep searching in lower half *)
-              bisect ok mid
+              bisect lower_bound middle_index
   in
   
-  let i = bisect 0 (List.length positions_list) in
-  List.nth positions_list i
+  let blocking_index = bisect 0 (List.length positions_list) in
+  List.nth positions_list blocking_index
+
+
 
 (** [parse_byte_positions input] parses the input string into a sequence of byte positions.
     
@@ -170,11 +181,13 @@ let parse_byte_positions input =
   |> List.map (fun line ->
       let parts = String.split_on_char ',' line in
       match parts with
-      | x :: y :: _ -> (int_of_string x, int_of_string y)
+      | x_str :: y_str :: _ -> (int_of_string x_str, int_of_string y_str)
       | _ -> failwith "Invalid input format: each line should have at least two numbers"
     )
   |> List.to_seq
 
+
+  
 (** Main execution function that solves both parts of the challenge. *)
 let () =
   try
@@ -183,11 +196,11 @@ let () =
     
     let start_time = Unix.gettimeofday () in
     
-    let answer1 = calculate_min_steps (70, 1024, positions) in
-    Printf.printf "Part 1: %d\n" answer1;
+    let part1_answer = calculate_min_steps (70, 1024, positions) in
+    Printf.printf "Part 1: %d\n" part1_answer;
     
-    let (x, y) = find_blocking_byte (70, positions) in
-    Printf.printf "Part 2: (%d, %d)\n" x y;
+    let (blocking_x, blocking_y) = find_blocking_byte (70, positions) in
+    Printf.printf "Part 2: (%d,%d)\n" blocking_x blocking_y;
     
     Unix.gettimeofday () -. start_time
     |> Printf.printf "Elapsed time: %.8f seconds\n"
