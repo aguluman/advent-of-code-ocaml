@@ -186,25 +186,3 @@ let parse_byte_positions input =
     )
   |> List.to_seq
 
-
-  
-(** Main execution function that solves both parts of the challenge. *)
-let () =
-  try
-    let input = In_channel.input_all In_channel.stdin |> String.trim in
-    let positions = parse_byte_positions input in
-    
-    let start_time = Unix.gettimeofday () in
-    
-    let part1_answer = calculate_min_steps (70, 1024, positions) in
-    Printf.printf "Part 1: %d\n" part1_answer;
-    
-    let (blocking_x, blocking_y) = find_blocking_byte (70, positions) in
-    Printf.printf "Part 2: (%d,%d)\n" blocking_x blocking_y;
-    
-    Unix.gettimeofday () -. start_time
-    |> Printf.printf "Elapsed time: %.8f seconds\n"
-    
-  with
-  | Failure msg -> Printf.printf "Error: %s\n" msg
-  | e -> Printf.printf "Unexpected error: %s\n" (Printexc.to_string e)
