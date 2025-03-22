@@ -215,6 +215,7 @@ let () = run_test_tt_main suite
 
 (** Main entry point *)
 let () =
+  try
   In_channel.input_all In_channel.stdin
   |> String.trim
   |> parse
@@ -227,3 +228,7 @@ let () =
 
       Unix.gettimeofday () -. start_time)
   |> Printf.printf "Elapsed time: %.4f seconds\n"
+
+  with
+  | Failure msg -> Printf.printf "Error: %s\n" msg
+  | e -> Printf.printf "Unexpected error: %s\n" (Printexc.to_string e)
