@@ -9,8 +9,10 @@ To get started with OCaml development.
 
 The command used on Windows OS to read the input file and run the code is:
 ```
-type "C:\path\to\your\input.txt" | dune exec ./test.exe
-
-The command used on Linux to read the input file and run the code is:
+  type "C:\path\to\your\input.txt" | dune exec ./test.exe
 ```
-cat "C:\path\to\your\input.txt" | dune exec ./test.exe
+
+The command used on Linux OS to read the input file and run the code is:
+```
+  cat "C:\path\to\your\input.txt" | dune exec ./test.exe
+```
