@@ -15,21 +15,6 @@ Register C: 0
 Program: 0,3,5,4,3,0"
 
 
-(** Helper function to create test cases for part1 *)
-let make_part1_test name input expected =
-  name >:: (fun _ ->
-    let register, program = parse input in
-    assert_equal expected (part1 register program)
-      ~printer:(fun s -> s))
-
-
-(** Helper function to create test cases for part2 *)
-let make_part2_test name input expected =
-  name >:: (fun _ ->
-    let register, program = parse input in
-    assert_equal expected (part2 register program |> Int64.to_int)
-      ~printer:string_of_int)
-
 
 (** Helper to test individual register execution - checks register values *)
 let make_register_value_test name register_a register_b register_c program expected_reg_a expected_reg_b expected_reg_c =
@@ -124,11 +109,25 @@ let instruction_tests = [
 ]
 
 
+(** Helper function to create test cases for part1 *)
+let make_part1_test name input expected =
+  name >:: (fun _ ->
+    let register, program = parse input in
+    assert_equal expected (part1 register program)
+      ~printer:(fun s -> s))
+
 (** Part 1 test cases *)
 let part1_tests = [
   make_part1_test "example_1_part1" example_input_1 "4,6,3,5,6,3,5,2,1,0";
 ]
 
+
+(** Helper function to create test cases for part2 *)
+let make_part2_test name input expected =
+  name >:: (fun _ ->
+    let register, program = parse input in
+    assert_equal expected (part2 register program |> Int64.to_int)
+      ~printer:string_of_int)
 
 (** Part 2 test cases *)
 let part2_tests = [
