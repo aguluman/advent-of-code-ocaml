@@ -174,15 +174,32 @@ let find_blocking_byte (grid_size, positions) =
     @return Sequence of (x,y) coordinates
     @raise Failure if input format is invalid
 *)
-let parse_byte_positions input =
-  input
-  |> String.split_on_char '\n'
-  |> List.filter (fun s -> String.length s > 0)
-  |> List.map (fun line ->
-      let parts = String.split_on_char ',' line in
-      match parts with
-      | x_str :: y_str :: _ -> (int_of_string x_str, int_of_string y_str)
-      | _ -> failwith "Invalid input format: each line should have at least two numbers"
-    )
-  |> List.to_seq
 
+(* Helper function to safely convert string to int *)
+let safe_int_of_string s =
+  try Some (int_of_string s)
+  with Failure _ -> None
+
+(* Function to preprocess and clean input lines *)
+let preprocess_lines lines =
+  lines
+  |> List.map String.trim  (* Remove unnecessary spaces *)
+  |> List.filter (fun s -> String.length s > 0)  (* Remove empty lines *)
+
+(* Function to parse byte positions with robust error handling *)
+let parse_byte_positions input =
+  let lines = input |> String.split_on_char '\n' |> preprocess_lines in
+  lines
+  |> List.filter_map (fun line ->
+         let parts = String.split_on_char ',' line in
+         match parts with
+         | x_str :: y_str :: _ -> (
+             match (safe_int_of_string x_str, safe_int_of_string y_str) with
+             | Some x, Some y -> Some (x, y)
+             | _ ->
+                 Printf.printf "Skipping invalid line: %s\n" line;
+                 None)
+         | _ ->
+             Printf.printf "Invalid format: %s\n" line;
+             None)
+  |> List.to_seq
