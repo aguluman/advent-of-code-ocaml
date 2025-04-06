@@ -150,98 +150,81 @@ let bfs_fast start_row start_col maze =
   @return List of (improvement, count) tuples sorted by improvement value
 *)
 
-
 let part1 maze =
-    let start_row, start_col = find_index_2d maze 'S' 
-  in
-    let end_row, end_col = find_index_2d maze 'E' 
-  in
+  let start_row, start_col = find_index_2d maze 'S' in
+  let end_row, end_col = find_index_2d maze 'E' in
 
-    let distances_from_start = bfs_fast start_row start_col maze 
-  in
-    let end_position = (end_row, end_col) in
+  let distances_from_start = bfs_fast start_row start_col maze in
+  let end_position = (end_row, end_col) in
 
-    if 
-      not (Hashtbl.mem distances_from_start end_position) 
-    then
-      []
-    else
-      let original_distance = Hashtbl.find distances_from_start end_position 
+  if not (Hashtbl.mem distances_from_start end_position) then
+    []
+  else
+    let original_distance = Hashtbl.find distances_from_start end_position in
+    let visited = Hashtbl.create (Array.length maze * Array.length maze.(0)) in
+    let walls = Hashtbl.create (Array.length maze * Array.length maze.(0)) in
+
+    (* Find walls along the path using BFS *)
+    let queue = Queue.create () in
+    Queue.add end_position queue;
+    Hashtbl.add visited end_position ();
+
+    while not (Queue.is_empty queue) do
+      let (row, col) = Queue.take queue in
+      [| (-1, 0); (1, 0); (0, -1); (0, 1) |]
+      |> Array.iter (fun (delta_row, delta_col) ->
+          let neighbor_row, neighbor_col = row + delta_row, col + delta_col in
+
+          if neighbor_row >= 0
+             && neighbor_row < Array.length maze
+             && neighbor_col >= 0
+             && neighbor_col < Array.length maze.(0) then
+            let neighbor_pos = (neighbor_row, neighbor_col) in
+
+            if maze.(neighbor_row).(neighbor_col) = '#' then
+              if not (Hashtbl.mem walls neighbor_pos) then
+                Hashtbl.add walls neighbor_pos ()
+            else if not (Hashtbl.mem visited neighbor_pos)
+                    && Hashtbl.mem distances_from_start neighbor_pos then
+              Hashtbl.add visited neighbor_pos ();
+              Queue.add neighbor_pos queue
+         )
+    done;
+
+    (* Convert walls hashtable to list for parallel processing *)
+    let wall_list = Hashtbl.fold (fun pos _ acc -> pos :: acc) walls [] in
+    
+    (* Use Domain.spawn for parallel processing *)
+    let tasks = 
+      List.map (fun (wall_row, wall_col) ->
+        Domain.spawn (fun () ->
+          let maze_with_removed_wall = Array.map Array.copy maze in
+          maze_with_removed_wall.(wall_row).(wall_col) <- '.';
+
+          let new_distances = bfs_fast start_row start_col maze_with_removed_wall in
+
+          if Hashtbl.mem new_distances end_position then
+            let improvement = original_distance - Hashtbl.find new_distances end_position in
+            if improvement > 0 then (improvement, 1) else (0, 0)
+          else (0, 0)
+        )
+      ) wall_list
     in
-      let visited = Hashtbl.create (Array.length maze * Array.length maze.(0)) 
-    in
-      let walls = Hashtbl.create (Array.length maze * Array.length maze.(0)) 
-    in
+    
+    (* Collect results from all tasks *)
+    let results = List.map Domain.join tasks in
+    
+    (* Group by improvement value *)
+    let improvements = Hashtbl.create 50 in
+    List.iter (fun (improvement, count) ->
+      if improvement > 0 then
+        Hashtbl.replace improvements improvement
+          (count + (try Hashtbl.find improvements improvement with Not_found -> 0))
+    ) results;
 
-      (* Find walls along the path using BFS *)
-      let queue = Queue.create () 
-    in
-      Queue.add end_position queue;
-      Hashtbl.add visited end_position ();
-
-      while 
-        not (Queue.is_empty queue) 
-      do
-        let (row, col) = Queue.take queue 
-      in
-        [| (-1, 0); (1, 0); (0, -1); (0, 1) |]
-        |> Array.iter (fun (delta_row, delta_col) ->
-            let neighbor_row, neighbor_col = row + delta_row, col + delta_col 
-          in
-
-            if neighbor_row >= 0
-              && neighbor_row < Array.length maze
-              && neighbor_col >= 0
-              && neighbor_col < Array.length maze.(0) 
-            then
-              let neighbor_pos = (neighbor_row, neighbor_col) 
-          in
-
-              if 
-                maze.(neighbor_row).(neighbor_col) = '#' 
-              then
-                if 
-                  not (Hashtbl.mem walls neighbor_pos) 
-              then
-                  Hashtbl.add walls neighbor_pos ()
-              else if 
-                not (Hashtbl.mem visited neighbor_pos)
-                && Hashtbl.mem distances_from_start neighbor_pos 
-              then
-                Hashtbl.add visited neighbor_pos ();
-                Queue.add neighbor_pos queue
-          )
-      done;
-
-      (* Process walls sequentially (lacking built-in parallel support) *)
-      let improvements = Hashtbl.create 50 
-    in
-      
-      Hashtbl.iter (fun (wall_row, wall_col) _ ->
-        let maze_with_removed_wall = Array.map Array.copy maze 
-      in
-        maze_with_removed_wall.(wall_row).(wall_col) <- '.';
-
-        let new_distances = bfs_fast start_row start_col maze_with_removed_wall 
-      in
-
-        if 
-          Hashtbl.mem new_distances end_position 
-        then
-          let improvement = original_distance - Hashtbl.find new_distances end_position 
-      in
-
-          if 
-            improvement > 0 
-          then
-            Hashtbl.replace improvements improvement 
-              (1 + (try Hashtbl.find improvements improvement with Not_found -> 0))
-      ) walls;
-
-      (* Convert improvements to a sorted list *)
-      Hashtbl.fold (fun key value acc -> (key, value) :: acc) improvements []
-      |> List.sort compare
-
+    (* Convert improvements to a sorted list *)
+    Hashtbl.fold (fun key value acc -> (key, value) :: acc) improvements []
+    |> List.sort compare
 
 
 
@@ -269,44 +252,59 @@ let part2 maze =
   let start_row, start_col = find_index_2d maze 'S' in
   let distances = bfs_fast start_row start_col maze in
 
-  let inefficiencies = Hashtbl.create 50 in
   let reachable_points = 
     Hashtbl.fold (fun pos _ acc -> pos :: acc) distances []
     |> Array.of_list in
   
-  (* Process sequentially instead of in parallel for now *)
-  (* Later we can add Domainslib support if needed *)
-  for i = 0 to Array.length reachable_points - 1 do
-    let (row1, col1) = reachable_points.(i) in
-    let distance1 = Hashtbl.find distances (row1, col1) in
-    
-    let local_inefficiencies = Hashtbl.create 20 in
-    
-    for j = i + 1 to Array.length reachable_points - 1 do
-      let (row2, col2) = reachable_points.(j) in
-      let distance2 = Hashtbl.find distances (row2, col2) in
-      
-      let manhattan_distance = abs (row1 - row2) + abs (col1 - col2) in
-      
-      if manhattan_distance <= 20 then
-        let inefficiency1 = distance2 - distance1 - manhattan_distance in
-        
-        if inefficiency1 >= 0 then
-          Hashtbl.replace local_inefficiencies inefficiency1
-            (1 + (try Hashtbl.find local_inefficiencies inefficiency1 with Not_found -> 0));
-        
-        let inefficiency2 = distance1 - distance2 - manhattan_distance in
-        
-        if inefficiency2 >= 0 then
-          Hashtbl.replace local_inefficiencies inefficiency2
-            (1 + (try Hashtbl.find local_inefficiencies inefficiency2 with Not_found -> 0));
-    done;
-    
-    Hashtbl.iter (fun inefficiency count ->
-      Hashtbl.replace inefficiencies inefficiency
-        (count + (try Hashtbl.find inefficiencies inefficiency with Not_found -> 0))
-    ) local_inefficiencies;
-  done;
+  let chunk_size = max 1 (Array.length reachable_points / (Domain.recommended_domain_count() * 2)) in
+  
+  (* Create tasks in chunks for better performance *)
+  let tasks = 
+    let rec create_chunks start acc =
+      if start >= Array.length reachable_points then acc
+      else
+        let end_idx = min (start + chunk_size) (Array.length reachable_points) in
+        let task = Domain.spawn (fun () ->
+          let local_inefficiencies = Hashtbl.create 50 in
+          
+          for i = start to end_idx - 1 do
+            let (row1, col1) = reachable_points.(i) in
+            let distance1 = Hashtbl.find distances (row1, col1) in
+            
+            for j = i + 1 to Array.length reachable_points - 1 do
+              let (row2, col2) = reachable_points.(j) in
+              let distance2 = Hashtbl.find distances (row2, col2) in
+              
+              let manhattan_distance = abs (row1 - row2) + abs (col1 - col2) in
+              
+              if manhattan_distance <= 20 then
+                let inefficiency1 = distance2 - distance1 - manhattan_distance in
+                if inefficiency1 >= 0 then
+                  Hashtbl.replace local_inefficiencies inefficiency1
+                    (1 + (try Hashtbl.find local_inefficiencies inefficiency1 with Not_found -> 0));
+                
+                let inefficiency2 = distance1 - distance2 - manhattan_distance in
+                if inefficiency2 >= 0 then
+                  Hashtbl.replace local_inefficiencies inefficiency2
+                    (1 + (try Hashtbl.find local_inefficiencies inefficiency2 with Not_found -> 0));
+            done;
+          done;
+          local_inefficiencies
+        ) in
+        create_chunks end_idx (task :: acc)
+    in
+    create_chunks 0 []
+  in
+  
+  (* Collect and combine results *)
+  let inefficiencies = Hashtbl.create 50 in
+  List.iter (fun task ->
+    let local_results = Domain.join task in
+    Hashtbl.iter (fun key value ->
+      Hashtbl.replace inefficiencies key
+        (value + (try Hashtbl.find inefficiencies key with Not_found -> 0))
+    ) local_results;
+  ) tasks;
   
   Hashtbl.fold (fun key value acc -> (key, value) :: acc) inefficiencies []
   |> List.sort compare
@@ -357,7 +355,7 @@ let () =
     |> Printf.printf "Part 1: %d\n%!";
     
     let mid_time = Unix.gettimeofday () in
-    Printf.printf "Part 1 elapsed time: %.4f seconds\n%!" (mid_time -. start_time);
+    Printf.printf "Elapsed time: %.4f seconds\n%!" (mid_time -. start_time);
     
     (* Solve Part 2 with timing *)
     maze
@@ -367,7 +365,7 @@ let () =
     |> Printf.printf "Part 2: %d\n%!";
     
     let end_time = Unix.gettimeofday () in
-    Printf.printf "Part 2 elapsed time: %.4f seconds\n%!" (end_time -. mid_time);
+    Printf.printf "Elapsed time: %.4f seconds\n%!" (end_time -. mid_time);
     
   with
   | Failure msg -> Printf.printf "Error: %s\n" msg
