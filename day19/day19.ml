@@ -18,125 +18,148 @@
 open Str
 
 (** 
- * Determines how many designs from the given list can be created using available patterns.
- *
- * @param patterns List of available towel patterns
- * @param designs List of desired designs to check
- * @return Number of designs that can be created
+  Determines how many designs from the given list can be created using available patterns.
+ 
+  @param patterns List of available towel patterns
+  @param designs List of desired designs to check
+  @return Number of designs that can be created
  *)
 let part1 (patterns, designs) =
   (* Convert patterns to array for faster lookup *)
   let patterns_array = Array.of_list patterns in
+  let pattern_lens = Array.map String.length patterns_array in
+  
+  (* Create first-character index for patterns *)
+  let first_char_index = Hashtbl.create 5 in
+  Array.iteri (fun i pattern ->
+    if String.length pattern > 0 then
+      let first_char = pattern.[0] in
+      let current = try Hashtbl.find first_char_index first_char with Not_found -> [] in
+      Hashtbl.replace first_char_index first_char (i :: current)
+  ) patterns_array;
 
-  (* 
-   * Process each design to check if it can be created with available patterns.
-   * Uses dynamic programming with memoization to avoid recalculating results.
-   *)
+  (* Process each design to check if it can be created *)
   let process_design design =
-    (* Memoization table: position -> can be constructed (true/false) *)
-    let memo = Hashtbl.create 100 in
-
-    (* 
-     * Recursive function to check if a design can be constructed
-     * starting from the given position.
-     *)
-    let rec can_construct pos =
-      (* Base case: if we've reached the end, we've successfully constructed the design *)
-      if pos = String.length design then
-        true
-      (* If we've already computed this position, return the cached result *)
-      else if Hashtbl.mem memo pos then
-        Hashtbl.find memo pos
+    let design_len = String.length design in
+    
+    (* Array-based memoization: None=unknown, Some true=constructible, Some false=not constructible *)
+    let memo = Array.make (design_len + 1) None in
+    
+    (* Fast pattern matching without String.sub *)
+    let pattern_matches pattern pattern_len pos =
+      if pos + pattern_len > design_len then false
       else
-        (* Try each pattern to see if any work from the current position *)
-        let rec try_patterns i =
-          if i >= Array.length patterns_array then
-            (* We've tried all patterns and none worked *)
-            false
-          else
-            let pattern = patterns_array.(i) in
-            (* Check if this pattern can be placed at current position and
-               continue constructing the rest of the design *)
-            if pos + String.length pattern <= String.length design && 
-               String.sub design pos (String.length pattern) = pattern &&
-               can_construct (pos + String.length pattern) then
-              true
-            else
-              (* Try the next pattern *)
-              try_patterns (i + 1)
+        let rec check i =
+          if i >= pattern_len then true
+          else if design.[pos + i] <> pattern.[i] then false
+          else check (i + 1)
         in
-        
-        (* Start trying patterns from the first one *)
-        let result = try_patterns 0 in
-        (* Cache the result for this position *)
-        Hashtbl.add memo pos result;
-        result
+        check 0
     in
     
-    (* Start processing from the beginning of the design *)
+    (* Recursive function to check if design can be constructed *)
+    let rec can_construct pos =
+      if pos = design_len then true
+      else match memo.(pos) with
+        | Some result -> result
+        | None ->
+            (* Get patterns that start with the current character for faster filtering *)
+            let relevant_patterns = 
+              if pos < design_len then
+                try Hashtbl.find first_char_index design.[pos]
+                with Not_found -> []
+              else []
+            in
+            
+            (* Try each relevant pattern *)
+            let result = List.exists (fun i ->
+              let pattern = patterns_array.(i) in
+              let pattern_len = pattern_lens.(i) in
+              pattern_matches pattern pattern_len pos && can_construct (pos + pattern_len)
+            ) relevant_patterns in
+            
+            memo.(pos) <- Some result;
+            result
+    in
+    
     can_construct 0
   in
   
   (* Count how many designs can be constructed *)
-  List.length (List.filter process_design designs)
+  List.fold_left (fun count design -> 
+    if process_design design then count + 1 else count
+  ) 0 designs
+
 
 
 (**
- * Calculates the total number of ways to create each design using available patterns.
- *
- * - @param patterns List of available towel patterns
- * - @param designs List of desired designs to count ways for
- * - @return Total number of ways to create all designs (potentially very large)
+ Calculates the total number of ways to create each design using available patterns.
+
+ @param patterns List of available towel patterns
+ @param designs List of desired designs to count ways for
+ @return Total number of ways to create all designs (potentially very large)
  *)
 let part2 (patterns, designs) =
   (* Convert patterns to array for faster lookup *)
   let patterns_array = Array.of_list patterns in
+  let pattern_lens = Array.map String.length patterns_array in
   
-  (* 
-   * Process each design to count ways it can be created.
-   * Uses dynamic programming with memoization for efficiency.
-   *)
+  (* Create first-character index for patterns *)
+  let first_char_index = Hashtbl.create 5 in
+  Array.iteri (fun i pattern ->
+    if String.length pattern > 0 then
+      let first_char = pattern.[0] in
+      let current = try Hashtbl.find first_char_index first_char with Not_found -> [] in
+      Hashtbl.replace first_char_index first_char (i :: current)
+  ) patterns_array;
+  
+  (* Process each design to count ways it can be created *)
   let process_design design =
-    (* Memoization table: position -> number of ways to construct (Int64 due to potentially large counts) *)
-    let memo = Hashtbl.create 100 in
+    let design_len = String.length design in
     
-    (*
-     * Recursive function to count ways to construct design starting from position 'pos'.
-     * Returns the number of ways as an Int64 value (since counts can be very large).
-     *)
-    let rec count_ways pos =
-      (* Base case: if we've reached the end, we've found one valid way *)
-      if pos = String.length design then
-        1L
-      (* If we've already computed this position, return the cached result *)
-      else if Hashtbl.mem memo pos then
-        Hashtbl.find memo pos
+    (* Array-based memoization for Int64 counts *)
+    let memo = Array.make (design_len + 1) None in
+    
+    (* Fast pattern matching without String.sub *)
+    let pattern_matches pattern pattern_len pos =
+      if pos + pattern_len > design_len then false
       else
-        (* Count ways for each pattern *)
-        let rec try_pattern i acc =
-          if i >= Array.length patterns_array then
-            acc
-          else
-            let pattern = patterns_array.(i) in
-            let new_acc = 
-              (* If pattern matches at current position, add ways to construct the rest *)
-              if pos + String.length pattern <= String.length design &&
-                 String.sub design pos (String.length pattern) = pattern then
-                Int64.add acc (count_ways (pos + String.length pattern))
-              else
-                acc
-            in
-            try_pattern (i + 1) new_acc
+        let rec check i =
+          if i >= pattern_len then true
+          else if design.[pos + i] <> pattern.[i] then false
+          else check (i + 1)
         in
-        
-        (* Accumulate ways starting with 0L *)
-        let ways = try_pattern 0 0L in
-        (* Cache the result for this position *)
-        Hashtbl.add memo pos ways;
-        ways
+        check 0
     in
     
-    (* Start counting from the beginning of the design *)
+    (* Recursive function to count ways *)
+    let rec count_ways pos =
+      if pos = design_len then 1L
+      else match memo.(pos) with
+        | Some ways -> ways
+        | None ->
+            (* Get patterns that start with the current character *)
+            let relevant_patterns = 
+              if pos < design_len then
+                try Hashtbl.find first_char_index design.[pos]
+                with Not_found -> []
+              else []
+            in
+            
+            (* Calculate ways using each relevant pattern *)
+            let ways = List.fold_left (fun acc i ->
+              let pattern = patterns_array.(i) in
+              let pattern_len = pattern_lens.(i) in
+              if pattern_matches pattern pattern_len pos then
+                Int64.add acc (count_ways (pos + pattern_len))
+              else
+                acc
+            ) 0L relevant_patterns in
+            
+            memo.(pos) <- Some ways;
+            ways
+    in
+    
     count_ways 0
   in
   
@@ -146,17 +169,19 @@ let part2 (patterns, designs) =
     0L 
     designs
 
+
+
 (**
- * Parse input into patterns and designs.
- *
- * The input format can be one of:
- * 1. A line of comma-separated patterns, followed by a blank line,
- *    followed by lines of designs.
- * 2. A line of comma-separated patterns, followed by lines of designs 
- *    without a blank line.
- *
- * @param input Raw input string
- * @return Tuple of (patterns list, designs list)
+ Parse input into patterns and designs.
+
+- The input format can be one of:
+- 1. A line of comma-separated patterns, followed by a blank line,
+    followed by lines of designs.
+- 2. A line of comma-separated patterns, followed by lines of designs 
+    without a blank line.
+
+ @param input Raw input string
+ @return Tuple of (patterns list, designs list)
  *)
 let parse input =
   (* Try to split on double newline to get patterns and designs sections *)
