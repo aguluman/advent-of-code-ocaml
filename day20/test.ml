@@ -37,8 +37,8 @@ let contains_all expected actual =
 let assert_superset_of expected actual =
   if not (contains_all expected actual) then
     assert_failure (Printf.sprintf "Expected results to contain all of %s but got %s" 
-      (String.concat ", " (List.map (fun (v, c) -> Printf.sprintf "(%d,%d)" v c) expected))
-      (String.concat ", " (List.map (fun (v, c) -> Printf.sprintf "(%d,%d)" v c) actual)))
+      (String.concat ", " (List.map (fun (value, count) -> Printf.sprintf "(%d,%d)" value count) expected))
+      (String.concat ", " (List.map (fun (value, count) -> Printf.sprintf "(%d,%d)" value count) actual)))
 
 (** Helper function to create part1 tests *)
 let make_part1_test name expected_values input =
