@@ -72,7 +72,60 @@ let bfs (si, sj) (maze : char array array) =
 
 
 
-
+let part1 (maze : char array array) =
+  let si, sj = find_index_2d maze 'S' in
+  let gi, gj = find_index_2d maze 'E' in
+  
+  let dist = bfs (si, sj) maze in
+  
+  (* Create all pairs of valid indices - equivalent to List.allPairs in F# *)
+  let all_pairs =
+    let row_indices = List.init (Array.length maze) (fun i -> i) in
+    let col_indices = List.init (Array.length maze.(0)) (fun j -> j) in
+    
+    List.flatten (List.map (fun i ->
+      List.map (fun j -> (i, j)) col_indices
+    ) row_indices)
+  in
+  
+  (* Filter and map pairs *)
+  let differences = 
+    List.filter_map (fun (i, j) ->
+      let tate =
+        i >= 1 && i + 1 < Array.length maze && 
+        maze.(i - 1).(j) <> '#' && maze.(i + 1).(j) <> '#' in
+      
+      let yoko =
+        j >= 1 && j + 1 < Array.length maze.(i) && 
+        maze.(i).(j - 1) <> '#' && maze.(i).(j + 1) <> '#' in
+      
+      if (maze.(i).(j) = '#' && (tate || yoko)) then (
+        maze.(i).(j) <- '.';
+        let d = bfs (si, sj) maze in
+        maze.(i).(j) <- '#';
+        
+        let original_dist = IntPairMap.find (gi, gj) dist in
+        let new_dist = IntPairMap.find (gi, gj) d in
+        
+        Some (original_dist - new_dist)
+      ) else (
+        None
+      )
+    ) all_pairs
+  in
+  
+  (* Count occurrences of each difference - equivalent to List.countBy in F# *)
+  let module IntMap = Map.Make(Int) in
+  let counts = 
+    List.fold_left (fun acc x ->
+      let count = try IntMap.find x acc with Not_found -> 0 in
+      IntMap.add x (count + 1) acc
+    ) IntMap.empty differences
+  in
+  
+  (* Convert map to list of (value, count) pairs and sort *)
+  let count_list = IntMap.bindings counts in
+  List.sort compare count_list
 
 
 
