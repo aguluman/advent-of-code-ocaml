@@ -195,37 +195,3 @@ let parse input =
         (patterns, rest)
 
 
-(** Main entry point for solution *)
-let () =
-  try
-    (* Read input from stdin *)
-    let input = In_channel.input_all In_channel.stdin |> String.trim in
-    Printf.printf "Input length: %d\n%!" (String.length input);
-    
-    (* Parse input into patterns and designs *)
-    let patterns, designs = parse input in
-    Printf.printf "Parsed %d patterns and %d designs\n%!" 
-      (List.length patterns) 
-      (List.length designs);
-    
-    (* Time the execution *)
-    let start_time = Unix.gettimeofday () in
-    
-    (* Solve and print Part 1 *)
-    part1 (patterns, designs) 
-      |> string_of_int 
-      |> Printf.printf "Part 1: %s\n%!";
-    
-    (* Solve and print Part 2 *)
-    part2 (patterns, designs) 
-      |> Int64.to_int  (* Note: This could overflow for very large outputs *)
-      |> string_of_int 
-      |> Printf.printf "Part 2: %s\n%!";
-    
-    (* Print elapsed time *)
-    Unix.gettimeofday () -. start_time
-      |> Printf.printf "Elapsed time: %.4f seconds\n"
-    
-  with
-  | Failure msg -> Printf.printf "Error: %s\n" msg
-  | e -> Printf.printf "Unexpected error: %s\n" (Printexc.to_string e)
