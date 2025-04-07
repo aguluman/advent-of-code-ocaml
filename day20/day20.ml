@@ -1,172 +1,111 @@
+module CoordHash = Hashtbl.Make(struct
+  type t = int * int
+  let equal (x1,y1) (x2,y2) = x1 = x2 && y1 = y2
+  let hash (x,y) = (x lsl 16) + y
+end)
 
 let find_index_2d array value =
   let rows = Array.length array in
   let cols = Array.length array.(0) in
+  let found = ref None in
   
-  (* Create a list of all (row,col) pairs *)
-  let all_pairs = 
-    let row_indices = List.init rows (fun i -> i) in
-    let col_indices = List.init cols (fun i -> i) in
-    
-    List.flatten (List.map (fun row -> 
-      List.map (fun column -> (row, column)) col_indices
-    ) row_indices)
-  in
+  for i = 0 to rows - 1 do
+    for j = 0 to cols - 1 do
+      if array.(i).(j) = value then
+        found := Some (i, j)
+    done;
+  done;
   
-  (* Find the first pair where the array value matches *)
-  List.find (fun (row, column) -> array.(row).(column) = value) all_pairs
-
-
-(* Create a map module for coordinate pairs *)
-module IntPairMap = Map.Make(struct
-  type t = int * int
-  let compare = compare
-end)
+  match !found with
+  | Some pos -> pos
+  | None -> raise Not_found
 
 let bfs (si, sj) (maze : char array array) =
-  (* Process a node and find valid neighbors *)
-  let transition (i, j) dist =
-    let process_direction acc (di, dj) =
-      let nodes, dist = acc in
+  let module Q = Queue in
+  let q = Q.create () in
+  let dist = CoordHash.create 10000 in
+  let rows = Array.length maze in
+  let cols = Array.length maze.(0) in
+  
+  CoordHash.add dist (si, sj) 0;
+  Q.push (si, sj) q;
+  
+  while not (Q.is_empty q) do
+    let (i, j) = Q.pop q in
+    let curr_dist = CoordHash.find dist (i, j) in
+    
+    [(-1, 0); (0, -1); (1, 0); (0, 1)]
+    |> List.iter (fun (di, dj) ->
       let ni, nj = i + di, j + dj in
-      
-      if 0 <= ni && ni < Array.length maze &&
-         0 <= nj && nj < Array.length maze.(ni) &&
+      if ni >= 0 && ni < rows && nj >= 0 && nj < cols &&
          maze.(ni).(nj) <> '#' &&
-         not (IntPairMap.mem (ni, nj) dist)
-      then
-        let new_dist = IntPairMap.add (ni, nj) (IntPairMap.find (i, j) dist + 1) dist in
-        (Some (ni, nj) :: nodes, new_dist)
-      else
-        (None :: nodes, dist)
-    in
-    
-    let new_nodes_opt, new_dist = 
-      List.fold_left process_direction ([], dist) [(-1, 0); (0, -1); (1, 0); (0, 1)]
-    in
-    
-    (* Filter out None values *)
-    let new_nodes = List.filter_map (fun x -> x) new_nodes_opt in
-    (new_nodes, new_dist)
-  in
-  
-  (* Main BFS logic *)
-  let rec bfs' nodes dist =
-    if nodes = [] then
-      dist
-    else
-      let new_nodes, final_dist =
-        List.fold_left
-          (fun (all_nodes, current_dist) node ->
-            let new_nodes, new_dist = transition node current_dist in
-            (new_nodes @ all_nodes, new_dist))
-          ([], dist)
-          nodes
-      in
-      
-      bfs' new_nodes final_dist
-  in
-  
-  (* Start BFS from initial position *)
-  bfs' [(si, sj)] (IntPairMap.singleton (si, sj) 0)
-
-
+         not (CoordHash.mem dist (ni, nj))
+      then begin
+        CoordHash.add dist (ni, nj) (curr_dist + 1);
+        Q.push (ni, nj) q
+      end)
+  done;
+  dist
 
 let part1 (maze : char array array) =
   let si, sj = find_index_2d maze 'S' in
   let gi, gj = find_index_2d maze 'E' in
+  let rows = Array.length maze in
+  let cols = Array.length maze.(0) in
+  let init_dist = bfs (si, sj) maze in
+  let differences = ref [] in
   
-  let dist = bfs (si, sj) maze in
-  
-  (* Create all pairs of valid indices - equivalent to List.allPairs in F# *)
-  let all_pairs =
-    let row_indices = List.init (Array.length maze) (fun i -> i) in
-    let col_indices = List.init (Array.length maze.(0)) (fun j -> j) in
-    
-    List.flatten (List.map (fun i ->
-      List.map (fun j -> (i, j)) col_indices
-    ) row_indices)
-  in
-  
-  (* Filter and map pairs *)
-  let differences = 
-    List.filter_map (fun (i, j) ->
-      let tate =
-        i >= 1 && i + 1 < Array.length maze && 
-        maze.(i - 1).(j) <> '#' && maze.(i + 1).(j) <> '#' in
-      
-      let yoko =
-        j >= 1 && j + 1 < Array.length maze.(i) && 
-        maze.(i).(j - 1) <> '#' && maze.(i).(j + 1) <> '#' in
-      
-      if (maze.(i).(j) = '#' && (tate || yoko)) then (
-        maze.(i).(j) <- '.';
-        let d = bfs (si, sj) maze in
-        maze.(i).(j) <- '#';
+  for i = 1 to rows - 2 do
+    for j = 1 to cols - 2 do
+      if maze.(i).(j) = '#' then begin
+        let tate = maze.(i-1).(j) <> '#' && maze.(i+1).(j) <> '#' in
+        let yoko = maze.(i).(j-1) <> '#' && maze.(i).(j+1) <> '#' in
         
-        let original_dist = IntPairMap.find (gi, gj) dist in
-        let new_dist = IntPairMap.find (gi, gj) d in
-        
-        Some (original_dist - new_dist)
-      ) else (
-        None
-      )
-    ) all_pairs
-  in
+        if tate || yoko then begin
+          maze.(i).(j) <- '.';
+          let new_dist = bfs (si, sj) maze in
+          maze.(i).(j) <- '#';
+          
+          let original_dist = CoordHash.find init_dist (gi, gj) in
+          let after_dist = CoordHash.find new_dist (gi, gj) in
+          differences := (original_dist - after_dist) :: !differences
+        end
+      end
+    done
+  done;
   
-  (* Count occurrences of each difference - equivalent to List.countBy in F# *)
   let module IntMap = Map.Make(Int) in
   let counts = 
     List.fold_left (fun acc x ->
       let count = try IntMap.find x acc with Not_found -> 0 in
       IntMap.add x (count + 1) acc
-    ) IntMap.empty differences
+    ) IntMap.empty !differences
   in
   
-  (* Convert map to list of (value, count) pairs and sort *)
-  let count_list = IntMap.bindings counts in
-  List.sort compare count_list
-
-
+  IntMap.bindings counts |> List.sort compare
 
 let part2 (maze : char array array) =
   let si, sj = find_index_2d maze 'S' in
-  
   let dist = bfs (si, sj) maze in
-  let dist_list = IntPairMap.bindings dist in
+  let differences = ref [] in
   
-  (* Create all pairs of positions - equivalent to List.allPairs in F# *)
-  let all_pairs = 
-    List.flatten 
-      (List.map (fun ((i, j), d) -> 
-        List.map (fun ((i', j'), d') -> 
-          (((i, j), d), ((i', j'), d'))
-        ) dist_list
-      ) dist_list)
-  in
-  
-  (* Filter and map pairs *)
-  let differences = 
-    List.filter_map (fun (((i, j), d), ((i', j'), d')) ->
+  CoordHash.iter (fun (i, j) d ->
+    CoordHash.iter (fun (i', j') d' ->
       let e = abs (i - i') + abs (j - j') in
-      if d' - d >= 0 && e <= 20 then Some(d' - d - e) else None
-    ) all_pairs
-  in
+      if d' - d >= 0 && e <= 20 then
+        differences := (d' - d - e) :: !differences
+    ) dist
+  ) dist;
   
-  (* Count occurrences of each difference - equivalent to List.countBy in F# *)
   let module IntMap = Map.Make(Int) in
   let counts = 
     List.fold_left (fun acc x ->
       let count = try IntMap.find x acc with Not_found -> 0 in
       IntMap.add x (count + 1) acc
-    ) IntMap.empty differences
+    ) IntMap.empty !differences
   in
   
-  (* Convert map to list of (value, count) pairs and sort *)
-  let count_list = IntMap.bindings counts in
-  List.sort compare count_list
-
-
+  IntMap.bindings counts |> List.sort compare
 
 let parse input =
   input
