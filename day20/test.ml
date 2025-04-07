@@ -101,7 +101,7 @@ let () =
     |> part1
     |> List.fold_left (fun acc (improvement, count) -> 
         if improvement >= 100 then acc + count else acc) 0
-    |> Printf.printf "Part 1: %d\n%!";
+    |> Printf.printf "\nPart 1: %d\n%!";
     
     let mid_time = Unix.gettimeofday () in
     Printf.printf "Elapsed time: %.4f seconds\n%!" (mid_time -. start_time);
