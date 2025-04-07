@@ -124,9 +124,9 @@ let breadth_first_search (start_row, start_col) maze =
     - 1. Find start (S) and end (E) positions in the maze
     - 2. Compute the shortest path in the original maze
     - 3. For each candidate wall that could be a shortcut:
-      -  a. Remove the wall temporarily
-      -  b. Recompute shortest path
-      -  c. If path length decreases, record the improvement
+      - a. Remove the wall temporarily
+      - b. Recompute shortest path
+      - c. If path length decreases, record the improvement
     - 4. Return statistics on path improvements sorted by magnitude
     
     @param maze The 2D character array representing the maze
