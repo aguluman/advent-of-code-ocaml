@@ -139,18 +139,20 @@ let part1 (maze : char array array) =
   (* Use Task.parallel_for with manually tracked results *)
   let improvements = Array.make !count 0 in
   
-  Task.parallel_for pool ~start:0 ~finish:(!count - 1) ~body:(fun idx ->
-    let i, j = wall_positions.(idx) in
-    maze.(i).(j) <- '.';  (* Remove wall *)
-    let new_dist = bfs (si, sj) maze in
-    maze.(i).(j) <- '#';  (* Restore wall *)
-    
-    let after_idx = inline_idx cols gi gj in
-    let after_dist = UnboxedArray.get new_dist after_idx in
-    
-    if after_dist <> max_int && after_dist < original_dist then
-      improvements.(idx) <- original_dist - after_dist
-  );
+  let () = Task.run pool (fun () ->
+    Task.parallel_for pool ~start:0 ~finish:(!count - 1) ~body:(fun idx ->
+      let i, j = wall_positions.(idx) in
+      maze.(i).(j) <- '.';  (* Remove wall *)
+      let new_dist = bfs (si, sj) maze in
+      maze.(i).(j) <- '#';  (* Restore wall *)
+      
+      let after_idx = inline_idx cols gi gj in
+      let after_dist = UnboxedArray.get new_dist after_idx in
+      
+      if after_dist <> max_int && after_dist < original_dist then
+        improvements.(idx) <- original_dist - after_dist
+    )
+  ) in
   
   Task.teardown_pool pool;
   
@@ -212,24 +214,26 @@ let part2 (maze : char array array) =
   (* Pre-allocate result array *)
   let results = Array.make chunks [] in
   
-  Task.parallel_for pool ~start:0 ~finish:(chunks - 1) ~body:(fun chunk ->
-    let start_idx = chunk * chunk_size in
-    let end_idx = min ((chunk + 1) * chunk_size - 1) (!point_count - 1) in
-    let local_diffs = ref [] in
-    
-    for i = start_idx to end_idx do
-      let (x1, y1, d1) = points.(i) in
-      (* Only need to check within manhattan distance <= 20 *)
-      for j = 0 to !point_count - 1 do
-        let (x2, y2, d2) = points.(j) in
-        let e = abs (x1 - x2) + abs (y1 - y2) in
-        if e <= 20 && d2 - d1 >= 0 then
-          local_diffs := (d2 - d1 - e) :: !local_diffs
-      done
-    done;
-    
-    results.(chunk) <- !local_diffs
-  );
+  let () = Task.run pool (fun () ->
+    Task.parallel_for pool ~start:0 ~finish:(chunks - 1) ~body:(fun chunk ->
+      let start_idx = chunk * chunk_size in
+      let end_idx = min ((chunk + 1) * chunk_size - 1) (!point_count - 1) in
+      let local_diffs = ref [] in
+      
+      for i = start_idx to end_idx do
+        let (x1, y1, d1) = points.(i) in
+        (* Only need to check within manhattan distance <= 20 *)
+        for j = 0 to !point_count - 1 do
+          let (x2, y2, d2) = points.(j) in
+          let e = abs (x1 - x2) + abs (y1 - y2) in
+          if e <= 20 && d2 - d1 >= 0 then
+            local_diffs := (d2 - d1 - e) :: !local_diffs
+        done
+      done;
+      
+      results.(chunk) <- !local_diffs
+    )
+  ) in
   
   (* Combine results *)
   let all_diffs = Array.fold_left (@) [] results in
