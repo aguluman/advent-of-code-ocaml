@@ -357,5 +357,8 @@ let part2 codes =
     @param input The input string containing keypad codes separated by newlines.
     @return A sequence of strings, each representing a keypad code. *)
 let parse input = 
-  String.split_on_char '\n' input |> List.map String.trim |> Array.of_list |> Array.to_seq
+  String.split_on_char '\n' input 
+  |> List.map String.trim 
+  |> Array.of_list 
+  |> Array.to_seq
 
