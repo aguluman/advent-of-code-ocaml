@@ -243,6 +243,7 @@ let part2 maze =
 let parse input =
   input
   |> String.split_on_char '\n'
-  |> List.filter (fun line -> String.trim line <> "")
-  |> List.map (fun row -> Array.of_list (List.init (String.length row) (String.get row)))
-  |> Array.of_list
+  |> List.to_seq
+  |> Seq.filter (fun line -> String.trim line <> "")
+  |> Seq.map (fun row -> Array.of_list (List.init (String.length row) (String.get row)))
+  |> Array.of_seq
