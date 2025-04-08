@@ -143,19 +143,3 @@ let parse input =
   String.split_on_char '\n' input |> List.map String.trim |> Array.of_list |> Array.to_seq
 
 
-let () =
-  try
-    let input = In_channel.input_all In_channel.stdin |> String.trim in
-    let codes = parse input in
-    
-    let start_time = Unix.gettimeofday () in
-    
-    codes |> part1 |> Printf.printf "Part 1: %Ld\n";
-    codes |> part2 |> Printf.printf "Part 2: %Ld\n";
-    
-    Unix.gettimeofday () -. start_time
-    |> Printf.printf "Elapsed time: %.4f seconds\n"
-    
-  with
-  | Failure msg -> Printf.printf "Error: %s\n" msg
-  | e -> Printf.printf "Unexpected error: %s\n" (Printexc.to_string e)  
