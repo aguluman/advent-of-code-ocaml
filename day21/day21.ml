@@ -112,8 +112,14 @@ let get_directional_keypad_position button =
 let get_numeric_button_route source_button target_button =
   let (source_row, source_column) = get_door_keypad_position source_button in
   let (target_row, target_column) = get_door_keypad_position target_button in
-  let vertical_moves = List.init (abs (source_row - target_row)) (fun _ -> if source_row < target_row then 'v' else '^') in
-  let horizontal_moves = List.init (abs (source_column - target_column)) (fun _ -> if source_column < target_column then '>' else '<') in
+  let vertical_moves = 
+    List.init (abs (source_row - target_row)) 
+    (fun _ -> if source_row < target_row then 'v' else '^') 
+  in
+  let horizontal_moves = 
+    List.init (abs (source_column - target_column)) 
+    (fun _ -> if source_column < target_column then '>' else '<') 
+  in
   let vertical_first = vertical_moves @ horizontal_moves @ ['A'] in
   let horizontal_first = horizontal_moves @ vertical_moves @ ['A'] in
 
@@ -152,8 +158,14 @@ let get_numeric_button_route source_button target_button =
 let get_direction_button_route source_button target_button =
   let (source_row, source_column) = get_directional_keypad_position source_button in
   let (target_row, target_column) = get_directional_keypad_position target_button in
-  let vertical_moves = List.init (abs (source_row - target_row)) (fun _ -> if source_row < target_row then 'v' else '^') in
-  let horizontal_moves = List.init (abs (source_column - target_column)) (fun _ -> if source_column < target_column then '>' else '<') in
+  let vertical_moves = 
+    List.init (abs (source_row - target_row)) 
+    (fun _ -> if source_row < target_row then 'v' else '^') 
+  in
+  let horizontal_moves = 
+    List.init (abs (source_column - target_column)) 
+    (fun _ -> if source_column < target_column then '>' else '<') 
+  in
   let vertical_first = vertical_moves @ horizontal_moves @ ['A'] in
   let horizontal_first = horizontal_moves @ vertical_moves @ ['A'] in
 
@@ -178,6 +190,7 @@ let get_direction_button_route source_button target_button =
   | _ -> List.sort_uniq compare [vertical_first; horizontal_first]
 
 
+
 (** Recursively calculates the minimum cost path between two buttons with a specified recursion level.
 
     This function uses a recursive approach to find the optimal path between two buttons.
@@ -191,18 +204,33 @@ let rec find_min_cost_path recursion_level source_button target_button =
   if recursion_level = 0 then
     [target_button]
   else
-    let is_num_keypad = ('0' <= source_button && source_button <= '9') || ('0' <= target_button && target_button <= '9') in
-    let possible_routes = if is_num_keypad then get_numeric_button_route source_button target_button else get_direction_button_route source_button target_button in
+    let is_num_keypad = 
+        ('0' <= source_button 
+        && source_button <= '9') 
+      || 
+        ('0' <= target_button 
+        && target_button <= '9') 
+    in
+
+    let possible_routes = 
+      if is_num_keypad 
+        then get_numeric_button_route source_button target_button 
+        else get_direction_button_route source_button target_button 
+    in
 
     let paths = List.map (fun r ->
       let pairs = ('A' :: r) |> (fun l -> 
         make_pairs l
       ) in
-        flatten (List.map (fun (first_button, second_button) -> find_min_cost_path (recursion_level - 1) first_button second_button) pairs)
+        flatten 
+          (List.map (fun (first_button, second_button) -> 
+            find_min_cost_path (recursion_level - 1) first_button second_button) pairs)
     ) possible_routes in
     
-    List.hd (List.sort (fun first_path second_path -> compare (List.length first_path) (List.length second_path)) paths)
-
+    List.hd 
+      (List.sort 
+        (fun first_path second_path -> 
+          compare (List.length first_path) (List.length second_path)) paths)
 
 
 
@@ -210,8 +238,6 @@ let rec find_min_cost_path recursion_level source_button target_button =
 (** Hashtable for memoizing results of the find_min_cost function to avoid redundant calculations. *)
 let memo = Hashtbl.create 1000
 
-
-  
 (** Recursively calculates the minimum cost between two buttons with a specified recursion level.
 
     This function uses memoization to optimize performance by caching results of previous calculations.
@@ -232,14 +258,27 @@ let rec find_min_cost recursion_level source_button target_button =
       if recursion_level = 0 then
         1L
       else
-        let is_num_keypad = ('0' <= source_button && source_button <= '9') || ('0' <= target_button && target_button <= '9') in
-        let possible_routes = if is_num_keypad then get_numeric_button_route source_button target_button else get_direction_button_route source_button target_button in
+        let is_num_keypad = 
+          ('0' <= source_button 
+          && source_button <= '9') 
+        || 
+          ('0' <= target_button 
+          && target_button <= '9') in
+
+        let possible_routes = 
+          if is_num_keypad 
+            then get_numeric_button_route source_button target_button 
+            else get_direction_button_route source_button target_button 
+        in
 
         let costs = List.map (fun r ->
           let pairs = ('A' :: r) |> (fun l -> 
             make_pairs l
           ) in
-          List.fold_left (fun acc (first_button, second_button) -> Int64.add acc (find_min_cost (recursion_level - 1) first_button second_button)) 0L pairs
+          List.fold_left 
+            (fun acc (first_button, second_button) -> 
+              Int64.add acc (find_min_cost (recursion_level - 1) first_button second_button)) 
+              0L pairs
         ) possible_routes in
         
         List.hd (List.sort compare costs)
@@ -265,10 +304,15 @@ let part1 codes =
       let pairs = ('A' :: code_list) |> (fun l -> 
         make_pairs l
       ) in
-      let path = flatten (List.map (fun (first_button, second_button) -> find_min_cost_path (2 + 1) first_button second_button) pairs) in
+      let path = flatten (List.map 
+        (fun (first_button, second_button) -> 
+          find_min_cost_path (2 + 1) first_button second_button) pairs) 
+        in
       Int64.of_int (List.length path)
     in
-    let num = Int64.of_string (String.sub code 0 (String.length code - (if code.[String.length code - 1] = 'A' then 1 else 0))) in
+    let num = Int64.of_string 
+      (String.sub code 0 (String.length code - (if code.[String.length code - 1] = 'A' then 1 else 0))) 
+    in
     Int64.add acc (Int64.mul navigation_cost num)
   ) 0L codes
 
@@ -292,9 +336,14 @@ let part2 codes =
       let pairs = ('A' :: code_list) |> (fun l -> 
         make_pairs l
       ) in
-      List.fold_left (fun acc (first_button, second_button) -> Int64.add acc (find_min_cost (25 + 1) first_button second_button)) 0L pairs
+      List.fold_left 
+        (fun acc (first_button, second_button) -> 
+          Int64.add acc (find_min_cost (25 + 1) first_button second_button)) 
+          0L pairs
     in
-    let num = Int64.of_string (String.sub code 0 (String.length code - (if code.[String.length code - 1] = 'A' then 1 else 0))) in
+    let num = Int64.of_string 
+      (String.sub code 0 (String.length code - (if code.[String.length code - 1] = 'A' then 1 else 0))) 
+    in
     Int64.add acc (Int64.mul navigation_cost num)
   ) 0L codes
 
