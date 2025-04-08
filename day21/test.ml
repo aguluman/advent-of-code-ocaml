@@ -38,7 +38,7 @@ let () =
     
     let start_time = Unix.gettimeofday () in
     
-    codes |> part1 |> Printf.printf "Part 1: %Ld\n";
+    codes |> part1 |> Printf.printf "\nPart 1: %Ld\n";
     codes |> part2 |> Printf.printf "Part 2: %Ld\n";
     
     Unix.gettimeofday () -. start_time
