@@ -23,6 +23,11 @@
 *)
 
 
+(* Helper Function*)
+let rec make_pairs = function
+  | [] | [_] -> []
+  | first_button :: second_button :: rest -> (first_button, second_button) :: make_pairs (second_button :: rest)
+
 
 (** Maps a numeric [button] character to its 2D position on the numeric keypad.
 
@@ -109,10 +114,17 @@ let get_numeric_button_route source_button target_button =
   let left_col_buttons = ['7'; '4'; '1'] in
 
   match (source_button, target_button) with
-  | (src, tgt) when List.mem (src, tgt) (List.flatten (List.map (fun x -> List.map (fun y -> (x, y)) left_col_buttons) bottom_row_buttons)) -> [vertical_first]
-  | (src, tgt) when List.mem (src, tgt) (List.flatten (List.map (fun x -> List.map (fun y -> (x, y)) bottom_row_buttons) left_col_buttons)) -> [horizontal_first]
+  | (src, tgt) when
+      bottom_row_buttons
+      |> List.map (fun bottom_button -> List.map (fun left_button -> (bottom_button, left_button)) left_col_buttons)
+      |> List.flatten
+      |> List.mem (src, tgt) -> [vertical_first]
+  | (src, tgt) when
+      left_col_buttons
+      |> List.map (fun left_button -> List.map (fun bottom_button -> (left_button, bottom_button)) bottom_row_buttons)
+      |> List.flatten
+      |> List.mem (src, tgt) -> [horizontal_first]
   | _ -> List.sort_uniq compare [vertical_first; horizontal_first]
-
 
 
 
@@ -141,11 +153,22 @@ let get_direction_button_route source_button target_button =
   let top_row_buttons = ['^'; 'A'] in
   let left_col_buttons = ['<'] in
 
-  match (source_button, target_button) with
-  | (src, tgt) when List.mem (src, tgt) (List.flatten (List.map (fun x -> List.map (fun y -> (x, y)) left_col_buttons) top_row_buttons)) -> [vertical_first]
-  | (src, tgt) when List.mem (src, tgt) (List.flatten (List.map (fun x -> List.map (fun y -> (x, y)) top_row_buttons) left_col_buttons)) -> [horizontal_first]
+    match (source_button, target_button) with
+  | (src, tgt) when
+      top_row_buttons
+      |> List.map (fun top_button ->
+           left_col_buttons
+           |> List.map (fun left_button -> (top_button, left_button)))
+      |> List.flatten
+      |> List.mem (src, tgt) -> [vertical_first]
+  | (src, tgt) when
+      left_col_buttons
+      |> List.map (fun left_button ->
+           top_row_buttons
+           |> List.map (fun top_button -> (left_button, top_button)))
+      |> List.flatten
+      |> List.mem (src, tgt) -> [horizontal_first]
   | _ -> List.sort_uniq compare [vertical_first; horizontal_first]
-
 
 
 (** Recursively calculates the minimum cost path between two buttons with a specified recursion level.
@@ -166,15 +189,12 @@ let rec find_min_cost_path recursion_level source_button target_button =
 
     let paths = List.map (fun r ->
       let pairs = ('A' :: r) |> (fun l -> 
-        let rec make_pairs = function
-          | [] | [_] -> []
-          | x :: y :: rest -> (x, y) :: make_pairs (y :: rest)
-        in make_pairs l
+        make_pairs l
       ) in
-      List.flatten (List.map (fun (x, y) -> find_min_cost_path (recursion_level - 1) x y) pairs)
+        List.flatten (List.map (fun (first_button, second_button) -> find_min_cost_path (recursion_level - 1) first_button second_button) pairs)
     ) possible_routes in
     
-    List.hd (List.sort (fun l1 l2 -> compare (List.length l1) (List.length l2)) paths)
+    List.hd (List.sort (fun first_path second_path -> compare (List.length first_path) (List.length second_path)) paths)
 
 
 
@@ -210,12 +230,9 @@ let rec find_min_cost recursion_level source_button target_button =
 
         let costs = List.map (fun r ->
           let pairs = ('A' :: r) |> (fun l -> 
-            let rec make_pairs = function
-              | [] | [_] -> []
-              | x :: y :: rest -> (x, y) :: make_pairs (y :: rest)
-            in make_pairs l
+            make_pairs l
           ) in
-          List.fold_left (fun acc (x, y) -> Int64.add acc (find_min_cost (recursion_level - 1) x y)) 0L pairs
+          List.fold_left (fun acc (first_button, second_button) -> Int64.add acc (find_min_cost (recursion_level - 1) first_button second_button)) 0L pairs
         ) possible_routes in
         
         List.hd (List.sort compare costs)
@@ -239,12 +256,9 @@ let part1 codes =
     let code_list = List.of_seq (String.to_seq code) in
     let navigation_cost =
       let pairs = ('A' :: code_list) |> (fun l -> 
-        let rec make_pairs = function
-          | [] | [_] -> []
-          | x :: y :: rest -> (x, y) :: make_pairs (y :: rest)
-        in make_pairs l
+        make_pairs l
       ) in
-      let path = List.flatten (List.map (fun (x, y) -> find_min_cost_path (2 + 1) x y) pairs) in
+      let path = List.flatten (List.map (fun (first_button, second_button) -> find_min_cost_path (2 + 1) first_button second_button) pairs) in
       Int64.of_int (List.length path)
     in
     let num = Int64.of_string (String.sub code 0 (String.length code - (if code.[String.length code - 1] = 'A' then 1 else 0))) in
@@ -269,12 +283,9 @@ let part2 codes =
     let code_list = List.of_seq (String.to_seq code) in
     let navigation_cost =
       let pairs = ('A' :: code_list) |> (fun l -> 
-        let rec make_pairs = function
-          | [] | [_] -> []
-          | x :: y :: rest -> (x, y) :: make_pairs (y :: rest)
-        in make_pairs l
+        make_pairs l
       ) in
-      List.fold_left (fun acc (x, y) -> Int64.add acc (find_min_cost (25 + 1) x y)) 0L pairs
+      List.fold_left (fun acc (first_button, second_button) -> Int64.add acc (find_min_cost (25 + 1) first_button second_button)) 0L pairs
     in
     let num = Int64.of_string (String.sub code 0 (String.length code - (if code.[String.length code - 1] = 'A' then 1 else 0))) in
     Int64.add acc (Int64.mul navigation_cost num)
