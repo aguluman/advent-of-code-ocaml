@@ -1,5 +1,43 @@
+(** Solves Advent of Code Day 21 challenge about finding optimal paths between keypad buttons.
+
+    The solution uses dynamic programming with memoization and path optimization techniques.
+
+    {ul
+    {- Input: A set of button sequences (codes) that need to be navigated}
+    {- Part 1: Calculate the minimum cost to navigate each sequence with a recursion level of 3}
+    {- Part 2: Calculate the minimum cost with a much deeper recursion level of 26}
+    }
+
+    Both numeric (characters '0'-'9') and directional keypads are supported.
+
+    Directional keypad includes the following characters:
+    {ul
+    {- '^' (up arrow)}
+    {- 'v' (down arrow)}
+    {- '<' (left arrow)}
+    {- '>' (right arrow)}
+    {- 'A' (action button)}
+    }
+
+    @see <https://adventofcode.com/2024/day/21> Advent of Code 2024, Day 21
+*)
 
 
+
+(** Maps a numeric [button] character to its 2D position on the numeric keypad.
+
+    The numeric keypad layout is as follows:
+
+    {[
+    7 8 9
+    4 5 6
+    1 2 3
+      0 A
+    ]}
+
+  @raise Failure if the specified [button] is not a valid directional button.
+  @param button A character representing a button on the numeric keypad 
+  @return A tuple (row, column) representing the button's position *)
 let get_door_keypad_position button =
   match button with
   | '7' -> (0, 0)
@@ -17,6 +55,23 @@ let get_door_keypad_position button =
 
 
 
+(** Retrieves the row and column coordinates for a specified directional keypad button.
+
+    The directional keypad layout looks like this:
+
+    {[
+        ^  A
+     <  v  >
+    ]}
+
+    Accepted characters include '^', 'A', '<', 'v', and '>'. Any unrecognized character
+    will cause an exception to be thrown.
+    
+  @raise Failure if the specified [button] is not a valid directional button.
+
+  @param button A single character representing the directional keypad button.
+  @return A tuple (row, column) indicating the button's position in a 2D grid,
+    where row 0, column 0 is the top-left corner. *)
 let get_directional_keypad_position button =
   match button with
   | '^' -> (0, 1)
@@ -28,7 +83,20 @@ let get_directional_keypad_position button =
 
 
 
+(** Calculates possible routes between two numeric buttons on the keypad.
 
+    For most button pairs, there are two possible routes:
+    {ol
+    {- Moving vertically first, then horizontally (i.e. vertical_first)}
+    {- Moving horizontally first, then vertically (i.e. horizontal_first)}
+    }
+
+    Special cases exist for certain button combinations where only one route is logical.
+    Each route ends with the 'A' button, representing the selection/confirmation.
+
+    @param [source_button] The starting numeric button character 
+    @param [target_button] The destination numeric button character 
+    @return A list of possible routes, where each route is a list of buttons to press *)
 let get_numeric_button_route source_button target_button =
   let (source_row, source_column) = get_door_keypad_position source_button in
   let (target_row, target_column) = get_door_keypad_position target_button in
@@ -47,6 +115,21 @@ let get_numeric_button_route source_button target_button =
 
 
 
+
+(** Calculates possible routes between two directional buttons on the keypad.
+
+    For most button pairs, there are two possible routes:
+    {ol
+    {- Moving vertically first, then horizontally (vertical_first)}
+    {- Moving horizontally first, then vertically (horizontal_first)}
+    }
+
+    Special cases exist for certain button combinations where only one route is logical.
+    Each route ends with the 'A' button, representing the selection/confirmation.
+
+    @param [source_button] The starting directional button character 
+    @param [target_button] The destination directional button character 
+    @return A list of possible routes, where each route is a list of buttons to press *)
 let get_direction_button_route source_button target_button =
   let (source_row, source_column) = get_directional_keypad_position source_button in
   let (target_row, target_column) = get_directional_keypad_position target_button in
@@ -65,6 +148,15 @@ let get_direction_button_route source_button target_button =
 
 
 
+(** Recursively calculates the minimum cost path between two buttons with a specified recursion level.
+
+    This function uses a recursive approach to find the optimal path between two buttons.
+    It considers both numeric and directional keypads, and uses memoization to optimize performance.
+
+    @param recursion_level The maximum recursion depth allowed for the search
+    @param source_button The starting button character 
+    @param target_button The destination button character 
+    @return A list of buttons representing the minimum cost path *)
 let rec find_min_cost_path recursion_level source_button target_button =
   if recursion_level = 0 then
     [target_button]
@@ -87,8 +179,23 @@ let rec find_min_cost_path recursion_level source_button target_button =
 
 
 
+
+(** Hashtable for memoizing results of the find_min_cost function to avoid redundant calculations. *)
 let memo = Hashtbl.create 1000
 
+
+  
+(** Recursively calculates the minimum cost between two buttons with a specified recursion level.
+
+    This function uses memoization to optimize performance by caching results of previous calculations.
+    The recursion level determines how deep the algorithm will analyze possible paths.
+
+    @param recursion_level 
+      - The maximum recursion depth allowed for the search [or] 
+      - The recursion depth for cost calculation
+    @param source_button The starting button character 
+    @param target_button The destination button character 
+    @return The minimum cost (number of button presses) to navigate from source to target as an Int64 value *)
 let rec find_min_cost recursion_level source_button target_button =
   let key = (recursion_level, source_button, target_button) in
   try
@@ -118,6 +225,15 @@ let rec find_min_cost recursion_level source_button target_button =
 
 
 
+
+(** Solves part 1 of the keypad navigation challenge.
+
+   - This function calculates the total cost for navigating a sequence of button codes.
+   - Using a recursion level of 3 for path calculation.
+   - Each code's cost is multiplied by the numeric value of the code (excluding any trailing 'A' characters).
+
+    @param [codes] A sequence of keypad button codes to navigate
+    @return The total weighted cost of navigating all codes *)    
 let part1 codes =
   Seq.fold_left (fun acc code ->
     let code_list = List.of_seq (String.to_seq code) in
@@ -137,6 +253,17 @@ let part1 codes =
 
 
 
+
+(** Solves part 2 of the keypad navigation challenge.
+
+   - This function calculates the total cost for navigating a sequence of button codes.
+   - Using a recursion level of 26 for path/cost calculation.
+   - Each code's cost is multiplied by the numeric value of the code (excluding any trailing 'A' characters).
+   - This is a more computationally intensive calculation compared to part 1.
+   - The function uses memoization to optimize performance.
+
+    @param [codes] A sequence of keypad button codes to navigate
+    @return The total weighted cost of navigating all codes *)
 let part2 codes =
   Seq.fold_left (fun acc code ->
     let code_list = List.of_seq (String.to_seq code) in
@@ -155,8 +282,7 @@ let part2 codes =
 
 
 
-  
+
 let parse input = 
   String.split_on_char '\n' input |> List.map String.trim |> Array.of_list |> Array.to_seq
-
 
