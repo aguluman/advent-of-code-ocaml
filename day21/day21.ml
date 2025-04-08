@@ -23,10 +23,17 @@
 *)
 
 
-(* Helper Function*)
+(* Helper Functions*)
 let rec make_pairs = function
   | [] | [_] -> []
   | first_button :: second_button :: rest -> (first_button, second_button) :: make_pairs (second_button :: rest)
+
+let flatten list_of_lists =
+  let rec aux acc = function
+    | [] -> List.rev acc
+    | lst :: rest -> aux (List.rev_append lst acc) rest
+  in
+  aux [] list_of_lists
 
 
 (** Maps a numeric [button] character to its 2D position on the numeric keypad.
@@ -117,12 +124,12 @@ let get_numeric_button_route source_button target_button =
   | (src, tgt) when
       bottom_row_buttons
       |> List.map (fun bottom_button -> List.map (fun left_button -> (bottom_button, left_button)) left_col_buttons)
-      |> List.flatten
+      |> flatten
       |> List.mem (src, tgt) -> [vertical_first]
   | (src, tgt) when
       left_col_buttons
       |> List.map (fun left_button -> List.map (fun bottom_button -> (left_button, bottom_button)) bottom_row_buttons)
-      |> List.flatten
+      |> flatten
       |> List.mem (src, tgt) -> [horizontal_first]
   | _ -> List.sort_uniq compare [vertical_first; horizontal_first]
 
@@ -159,14 +166,14 @@ let get_direction_button_route source_button target_button =
       |> List.map (fun top_button ->
            left_col_buttons
            |> List.map (fun left_button -> (top_button, left_button)))
-      |> List.flatten
+      |> flatten
       |> List.mem (src, tgt) -> [vertical_first]
   | (src, tgt) when
       left_col_buttons
       |> List.map (fun left_button ->
            top_row_buttons
            |> List.map (fun top_button -> (left_button, top_button)))
-      |> List.flatten
+      |> flatten
       |> List.mem (src, tgt) -> [horizontal_first]
   | _ -> List.sort_uniq compare [vertical_first; horizontal_first]
 
@@ -191,7 +198,7 @@ let rec find_min_cost_path recursion_level source_button target_button =
       let pairs = ('A' :: r) |> (fun l -> 
         make_pairs l
       ) in
-        List.flatten (List.map (fun (first_button, second_button) -> find_min_cost_path (recursion_level - 1) first_button second_button) pairs)
+        flatten (List.map (fun (first_button, second_button) -> find_min_cost_path (recursion_level - 1) first_button second_button) pairs)
     ) possible_routes in
     
     List.hd (List.sort (fun first_path second_path -> compare (List.length first_path) (List.length second_path)) paths)
@@ -258,7 +265,7 @@ let part1 codes =
       let pairs = ('A' :: code_list) |> (fun l -> 
         make_pairs l
       ) in
-      let path = List.flatten (List.map (fun (first_button, second_button) -> find_min_cost_path (2 + 1) first_button second_button) pairs) in
+      let path = flatten (List.map (fun (first_button, second_button) -> find_min_cost_path (2 + 1) first_button second_button) pairs) in
       Int64.of_int (List.length path)
     in
     let num = Int64.of_string (String.sub code 0 (String.length code - (if code.[String.length code - 1] = 'A' then 1 else 0))) in
@@ -293,7 +300,13 @@ let part2 codes =
 
 
 
+(** [parse input] parses the input string into a sequence of strings.
 
+    - The input string is split into lines, each line is trimmed for whitespace,
+    converted to an array, and then transformed into a sequence.
+    
+    @param input The input string containing keypad codes separated by newlines.
+    @return A sequence of strings, each representing a keypad code. *)
 let parse input = 
   String.split_on_char '\n' input |> List.map String.trim |> Array.of_list |> Array.to_seq
 
