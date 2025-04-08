@@ -74,9 +74,8 @@ let () =
       |> Printf.printf "Part 1: %s\n%!";
     
     (* Solve and print Part 2 *)
-    part2 (patterns, designs) 
-      |> Int64.to_int  (* Note: This could overflow for very large outputs *)
-      |> string_of_int 
+    part2 (patterns, designs)
+      |> Int64.to_string
       |> Printf.printf "Part 2: %s\n%!";
     
     (* Print elapsed time *)
