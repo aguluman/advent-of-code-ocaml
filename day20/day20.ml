@@ -156,7 +156,7 @@ let part1 maze =
   done;
   
   (* Set up parallel task pool *)
-  let num_domains = try int_of_string Sys.argv.(1) with _ -> 3 in
+  let num_domains = try int_of_string Sys.argv.(1) with _ -> 4 in
   let pool = Task.setup_pool ~num_domains:(num_domains - 1) () in
   
   (* Process walls in parallel *)
@@ -220,7 +220,7 @@ let part2 maze =
   let cols = Array.length maze.(0) in
   
   (* Set up parallel task pool *)
-  let num_domains = try int_of_string Sys.argv.(1) with _ -> 3 in
+  let num_domains = try int_of_string Sys.argv.(1) with _ -> 4 in
   let pool = Task.setup_pool ~num_domains:(num_domains - 1) () in
   
   (* Shared data structure for results *)
