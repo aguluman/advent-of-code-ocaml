@@ -23,6 +23,12 @@
     @see <https://adventofcode.com/2024/day/22> Advent of Code 2024, Day 22
 *)
 
+module PatternKey = struct
+    type t = int64 * int64 * int64 * int64
+    let compare = compare
+    let hash = Hashtbl.hash
+    let equal = (=)
+  end 
 
 
 (** Mixes two values using XOR operation 
@@ -119,7 +125,68 @@ let part1 initial_secrets =
     @param initial_secrets Array of initial secret numbers from each buyer
     @return Maximum number of bananas obtainable using the optimal price change pattern
 *)
+let part2 initial_secrets =
+  (* Create sequences of price digits (0-9) for each initial secret *)
+  let sequences =
+    Array.map (fun initial ->
+      let numbers = Array.make 2001 0L in
+      numbers.(0) <- Int64.rem initial 10L;
+      
+      (* Compute the sequence in place *)
+      let current = ref initial in
+      for i = 1 to 2000 do
+        current := next !current;
+        numbers.(i) <- Int64.rem !current 10L
+      done;
+      
+      numbers
+    ) initial_secrets
+  in
+  
+  (* Calculate changes between consecutive numbers *)
+  let changes =
+    Array.map (fun seq ->
+      Array.init 2000 (fun i -> Int64.sub seq.(i + 1) seq.(i))
+    ) sequences
+  in
+  
 
+  (* Create hashtable for patterns *)
+  let pattern_map = Hashtbl.create 10000 in
+  
+  (* Process each buyer's changes *)
+  for buyer_idx = 0 to Array.length changes - 1 do
+    (* Use Hashtbl as an efficient set *)
+    let seen_patterns = Hashtbl.create 1000 in
+    
+    (* Find patterns *)
+    for i = 0 to Array.length changes.(buyer_idx) - 4 do
+      let pattern = (
+        changes.(buyer_idx).(i),
+        changes.(buyer_idx).(i + 1),
+        changes.(buyer_idx).(i + 2),
+        changes.(buyer_idx).(i + 3)
+      ) in
+      
+      if not (Hashtbl.mem seen_patterns pattern) then begin
+        let next_price = sequences.(buyer_idx).(i + 4) in
+        
+        (* Update pattern map *)
+        begin match Hashtbl.find_opt pattern_map pattern with
+        | None -> Hashtbl.add pattern_map pattern next_price
+        | Some existing -> Hashtbl.replace pattern_map pattern (Int64.add existing next_price)
+        end;
+        
+        (* Mark pattern as seen *)
+        Hashtbl.add seen_patterns pattern true
+      end
+    done
+  done;
+  
+  (* Find maximum sum *)
+  Hashtbl.fold (fun _ value max_value ->
+    if Int64.compare value max_value > 0 then value else max_value
+  ) pattern_map 0L
 
 
 
