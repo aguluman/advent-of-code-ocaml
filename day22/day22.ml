@@ -23,6 +23,9 @@
     @see <https://adventofcode.com/2024/day/22> Advent of Code 2024, Day 22
 *)
 
+open Domainslib
+
+
 module PatternKey = struct
     type t = int64 * int64 * int64 * int64
     let compare = compare
@@ -126,67 +129,90 @@ let part1 initial_secrets =
     @return Maximum number of bananas obtainable using the optimal price change pattern
 *)
 let part2 initial_secrets =
-  (* Create sequences of price digits (0-9) for each initial secret *)
-  let sequences =
-    Array.map (fun initial ->
-      let numbers = Array.make 2001 0L in
-      numbers.(0) <- Int64.rem initial 10L;
+  (* Create a task pool with a reasonable number of domains *)
+  let num_domains = Domain.recommended_domain_count () in
+  let pool = Task.setup_pool ~num_domains () in
+  
+  Task.run pool (fun _ ->
+    (* Step 1: Generate sequences in parallel *)
+    let sequences =
+      let buyer_count = Array.length initial_secrets in
+      let result = Array.make buyer_count [||] in
       
-      (* Compute the sequence in place *)
-      let current = ref initial in
-      for i = 1 to 2000 do
-        current := next !current;
-        numbers.(i) <- Int64.rem !current 10L
+      Task.parallel_for pool ~start:0 ~finish:(buyer_count - 1) ~body:(fun i ->
+        let initial = initial_secrets.(i) in
+        let numbers = Array.make 2001 0L in
+        numbers.(0) <- Int64.rem initial 10L;
+        
+        let current = ref initial in
+        for j = 1 to 2000 do
+          current := next !current;
+          numbers.(j) <- Int64.rem !current 10L
+        done;
+        
+        result.(i) <- numbers
+      );
+      result
+    in
+    
+    (* Step 2: Calculate changes in parallel *)
+    let changes =
+      let buyer_count = Array.length sequences in
+      let result = Array.make buyer_count [||] in
+      
+      Task.parallel_for pool ~start:0 ~finish:(buyer_count - 1) ~body:(fun i ->
+        result.(i) <- Array.init 2000 (fun j -> Int64.sub sequences.(i).(j + 1) sequences.(i).(j))
+      );
+      result
+    in
+    
+    (* Step 3: Process patterns using a shared table with locking *)
+    let pattern_map = Hashtbl.create 10000 in
+    let pattern_mutex = Mutex.create () in  (* For thread-safe updates *)
+    
+    Task.parallel_for pool ~start:0 ~finish:(Array.length changes - 1) ~body:(fun buyer_idx ->
+      let seen_patterns = Hashtbl.create 1000 in
+      let local_patterns = Hashtbl.create 1000 in
+      
+      for i = 0 to Array.length changes.(buyer_idx) - 4 do
+        let pattern = (
+          changes.(buyer_idx).(i),
+          changes.(buyer_idx).(i + 1),
+          changes.(buyer_idx).(i + 2),
+          changes.(buyer_idx).(i + 3)
+        ) in
+        
+        if not (Hashtbl.mem seen_patterns pattern) then begin
+          let next_price = sequences.(buyer_idx).(i + 4) in
+          
+          (* Update local pattern map *)
+          begin match Hashtbl.find_opt local_patterns pattern with
+          | None -> Hashtbl.add local_patterns pattern next_price
+          | Some existing -> Hashtbl.replace local_patterns pattern (Int64.add existing next_price)
+          end;
+          
+          (* Mark pattern as seen *)
+          Hashtbl.add seen_patterns pattern true
+        end
       done;
       
-      numbers
-    ) initial_secrets
-  in
-  
-  (* Calculate changes between consecutive numbers *)
-  let changes =
-    Array.map (fun seq ->
-      Array.init 2000 (fun i -> Int64.sub seq.(i + 1) seq.(i))
-    ) sequences
-  in
-  
-
-  (* Create hashtable for patterns *)
-  let pattern_map = Hashtbl.create 10000 in
-  
-  (* Process each buyer's changes *)
-  for buyer_idx = 0 to Array.length changes - 1 do
-    (* Use Hashtbl as an efficient set *)
-    let seen_patterns = Hashtbl.create 1000 in
+      (* Merge local results into global map with mutex protection *)
+      Mutex.lock pattern_mutex;
+      Hashtbl.iter (fun pattern value ->
+        match Hashtbl.find_opt pattern_map pattern with
+        | None -> Hashtbl.add pattern_map pattern value
+        | Some existing -> Hashtbl.replace pattern_map pattern (Int64.add existing value)
+      ) local_patterns;
+      Mutex.unlock pattern_mutex;
+    );
     
-    (* Find patterns *)
-    for i = 0 to Array.length changes.(buyer_idx) - 4 do
-      let pattern = (
-        changes.(buyer_idx).(i),
-        changes.(buyer_idx).(i + 1),
-        changes.(buyer_idx).(i + 2),
-        changes.(buyer_idx).(i + 3)
-      ) in
-      
-      if not (Hashtbl.mem seen_patterns pattern) then begin
-        let next_price = sequences.(buyer_idx).(i + 4) in
-        
-        (* Update pattern map *)
-        begin match Hashtbl.find_opt pattern_map pattern with
-        | None -> Hashtbl.add pattern_map pattern next_price
-        | Some existing -> Hashtbl.replace pattern_map pattern (Int64.add existing next_price)
-        end;
-        
-        (* Mark pattern as seen *)
-        Hashtbl.add seen_patterns pattern true
-      end
-    done
-  done;
-  
-  (* Find maximum sum *)
-  Hashtbl.fold (fun _ value max_value ->
-    if Int64.compare value max_value > 0 then value else max_value
-  ) pattern_map 0L
+    (* Find maximum sum *)
+    let result = Hashtbl.fold (fun _ value max_value ->
+      if Int64.compare value max_value > 0 then value else max_value
+    ) pattern_map 0L in
+    
+    result
+  )
 
 
 
