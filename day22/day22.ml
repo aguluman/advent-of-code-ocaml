@@ -26,14 +26,6 @@
 open Domainslib
 
 
-module PatternKey = struct
-    type t = int64 * int64 * int64 * int64
-    let compare = compare
-    let hash = Hashtbl.hash
-    let equal = (=)
-  end 
-
-
 (** Mixes two values using XOR operation 
 
   - The mixing operation combines a value with a secret number using bitwise XOR (^^^).
@@ -129,149 +121,140 @@ let part1 initial_secrets =
     @return Maximum number of bananas obtainable using the optimal price change pattern
 *)
 let part2 initial_secrets =
-  (* Create a task pool for parallel processing *)
-  let pool = Domainslib.Task.setup_pool 
-    ~num_domains:(Domain.recommended_domain_count() - 1) () in
+  (* Create optimal number of domains based on available cores *)
+  let num_domains = max 1 (Domain.recommended_domain_count() - 1) in
+  (* Use larger chunks for better cache locality and reduced overhead *)
+  let chunk_size = max 32 (Array.length initial_secrets / num_domains) in
+  let pool = Domainslib.Task.setup_pool ~num_domains () in
   
-  (* Process each buyer secret in parallel *)
-  let local_results = 
-    Task.run pool (fun () ->
-      let initial_secrets_list = Array.to_list initial_secrets in
-      let n = List.length initial_secrets_list in
+  (* Process buyer secrets in parallel with larger chunks for better performance *)
+  let results_array = Array.make (Array.length initial_secrets) (Hashtbl.create 0) in
+  Task.run pool (fun () ->
+    Task.parallel_for pool ~chunk_size ~start:0 ~finish:(Array.length initial_secrets - 1) ~body:(fun i ->
+      let buyer_secret = initial_secrets.(i) in
       
-      (* Convert to array for parallel_for compatibility *)
-      let initial_secrets_array = Array.of_list initial_secrets_list in
-      let results_array = Array.make n (Hashtbl.create 0) in
-      
-      Task.parallel_for pool ~start:0 ~finish:(n - 1) ~body:(fun i ->
-        let buyer_secret = initial_secrets_array.(i) in
-        (* Local hash tables for each domain *)
-        let local_pattern_map = Hashtbl.create 1024 in
-        let seen_patterns = Hashtbl.create 1024 in
+      (* Use integer-keyed hashtables for better performance *)
+      let local_pattern_map = Hashtbl.create 1024 in
+      let seen_patterns = Hashtbl.create 1024 in
         
-        (* Generate the first 5 prices *)
+        (* Pre-allocate all arrays for the full sequence *)
         let current = ref buyer_secret in
         let prices = Array.make 5 0L in
         
-        for i = 0 to 4 do
-          prices.(i) <- Int64.rem !current 10L;
-          current := next !current
-        done;
+        (* Generate initial prices (unrolled for better performance) *)
+        prices.(0) <- Int64.rem !current 10L;
+        current := next !current;
+        prices.(1) <- Int64.rem !current 10L;
+        current := next !current;
+        prices.(2) <- Int64.rem !current 10L;
+        current := next !current;
+        prices.(3) <- Int64.rem !current 10L;
+        current := next !current;
+        prices.(4) <- Int64.rem !current 10L;
+        current := next !current;
 
-          (* Create a sliding window of 4 changes (5 prices) *)
-          let changes = Array.make 4 0L in
+        (* Create a sliding window of 4 changes (5 prices) *)
+        let changes = Array.make 4 0L in
+        
+        (* Calculate initial changes (unrolled) *)
+        changes.(0) <- Int64.sub prices.(1) prices.(0);
+        changes.(1) <- Int64.sub prices.(2) prices.(1);
+        changes.(2) <- Int64.sub prices.(3) prices.(2);
+        changes.(3) <- Int64.sub prices.(4) prices.(3);
+        
+        (* Initial pattern encoding - inline calculation to avoid function call *)
+        let c1_int = Int64.to_int changes.(0) + 9 in
+        let c2_int = Int64.to_int changes.(1) + 9 in
+        let c3_int = Int64.to_int changes.(2) + 9 in
+        let c4_int = Int64.to_int changes.(3) + 9 in
+        let pattern_int = ref (c1_int + (c2_int * 19) + (c3_int * 19 * 19) + (c4_int * 19 * 19 * 19)) in
+        
+        (* Process first pattern *)
+        if not (Hashtbl.mem seen_patterns !pattern_int) then begin
+          Hashtbl.add seen_patterns !pattern_int ();
+          Hashtbl.add local_pattern_map !pattern_int prices.(4)
+        end;
+        
+        (* Process remaining sequences with larger batches *)
+        let batch_size = 400 in (* Larger batches for better amortized overhead *)
+        
+        for batch_idx = 0 to (2000 - 5) / batch_size do
+          let batch_start = 5 + (batch_idx * batch_size) in
+          let batch_end = min 2000 (batch_start + batch_size - 1) in
           
-          for i = 0 to 3 do
-            changes.(i) <- Int64.sub prices.(i + 1) prices.(i)
+          (* Pre-allocate batch prices array *)
+          let batch_size_actual = batch_end - batch_start + 1 in
+          let batch_prices = Array.make batch_size_actual 0L in
+          let current_batch = ref !current in
+          
+          (* Generate batch prices with minimal allocations and unrolled where possible *)
+          for i = 0 to batch_size_actual - 1 do
+            batch_prices.(i) <- Int64.rem !current_batch 10L;
+            current_batch := next !current_batch;
           done;
           
-          (* Use integer hash code instead of tuple for better performance *)
-          let pattern_to_int c1 c2 c3 c4 =
-            (* Range of each change is -9 to 9 (19 possibilities) *)
-            let c1_int = Int64.to_int c1 + 9 in
-            let c2_int = Int64.to_int c2 + 9 in
-            let c3_int = Int64.to_int c3 + 9 in
-            let c4_int = Int64.to_int c4 + 9 in
-            
-            c1_int + (c2_int * 19) + (c3_int * 19 * 19) + (c4_int * 19 * 19 * 19)
-          in
+          (* Update current for next batch *)
+          current := !current_batch;
           
-          (* Initial pattern *)
-          let pattern_int = ref (pattern_to_int changes.(0) changes.(1) changes.(2) changes.(3)) in
-          
-          (* Process first pattern *)
-          if not (Hashtbl.mem seen_patterns !pattern_int) then begin
-            Hashtbl.add seen_patterns !pattern_int ();
-            Hashtbl.add local_pattern_map !pattern_int prices.(4)
-          end;
-          
-          (* Process remaining sequences with batch pre-generation *)
-          let batch_size = 100 in
-          
-          (* Fixed the for loop with 'by' - using regular increments instead *)
-          for i = 0 to (2000 - 5) / batch_size do
-            let batch_start = 5 + (i * batch_size) in
-            let batch_end = min 2000 (batch_start + batch_size - 1) in
+          (* Process batch with optimized loops *)
+          for i = 0 to batch_size_actual - 1 do
+            let price = batch_prices.(i) in
             
-            (* Pre-generate prices for this batch *)
-            let batch_prices = Array.make (batch_end - batch_start + 1) 0L in
-            let current_for_batch = ref !current in
+            (* Shift the window (optimized) - single assignment is faster than loop *)
+            changes.(0) <- changes.(1);
+            changes.(1) <- changes.(2);
+            changes.(2) <- changes.(3);
+            changes.(3) <- Int64.sub price prices.(4);
             
-            for i = 0 to Array.length batch_prices - 1 do
-              batch_prices.(i) <- Int64.rem !current_for_batch 10L;
-              current_for_batch := next !current_for_batch
-            done;
+            (* Update prices (optimized) - single assignment is faster than loop *)
+            prices.(0) <- prices.(1);
+            prices.(1) <- prices.(2);
+            prices.(2) <- prices.(3);
+            prices.(3) <- prices.(4);
+            prices.(4) <- price;
             
-            (* Update current to the last computed value *)
-            current := !current_for_batch;
+            (* Calculate pattern int directly - inlined for speed *)
+            let c1_int = Int64.to_int changes.(0) + 9 in
+            let c2_int = Int64.to_int changes.(1) + 9 in
+            let c3_int = Int64.to_int changes.(2) + 9 in
+            let c4_int = Int64.to_int changes.(3) + 9 in
+            pattern_int := c1_int + (c2_int * 19) + (c3_int * 19 * 19) + (c4_int * 19 * 19 * 19);
             
-            (* Process batch *)
-            for i = 0 to batch_end - batch_start do
-              let price = batch_prices.(i) in
+            (* Fast path for updating pattern map - no nested if statements *)
+            if not (Hashtbl.mem seen_patterns !pattern_int) then begin
+              Hashtbl.add seen_patterns !pattern_int ();
               
-              (* Shift the window *)
-              for j = 0 to 2 do
-                changes.(j) <- changes.(j + 1)
-              done;
-              
-              changes.(3) <- Int64.sub price prices.(4);
-              
-              (* Update prices *)
-              for j = 0 to 3 do
-                prices.(j) <- prices.(j + 1)
-              done;
-              
-              prices.(4) <- price;
-              
-              (* Calculate new pattern using integer representation *)
-              pattern_int := pattern_to_int changes.(0) changes.(1) changes.(2) changes.(3);
-              
-              (* Update pattern map *)
-              if not (Hashtbl.mem seen_patterns !pattern_int) then begin
-                Hashtbl.add seen_patterns !pattern_int ();
-                
-                if Hashtbl.mem local_pattern_map !pattern_int then
-                  let existing = Hashtbl.find local_pattern_map !pattern_int in
-                  Hashtbl.replace local_pattern_map !pattern_int (Int64.add existing price)
-                else
-                  Hashtbl.add local_pattern_map !pattern_int price
-              end
-            done
-          done;
-          
-          results_array.(i) <- local_pattern_map
-      );
-      
-      Array.to_list results_array
-    )
-  in
+              match Hashtbl.find_opt local_pattern_map !pattern_int with
+              | Some existing -> Hashtbl.replace local_pattern_map !pattern_int (Int64.add existing price)
+              | None -> Hashtbl.add local_pattern_map !pattern_int price
+            end
+          done
+        done;
+        
+        results_array.(i) <- local_pattern_map;
+        ()
+      )
+    );
+
+  let local_results = Array.to_list results_array in
   
-  (* Merge local results *)
-  let final_pattern_map = Hashtbl.create 1024 in
+  (* Pre-allocate final hashtable with size based on expected number of patterns *)
+  let final_pattern_map = Hashtbl.create 8192 in
   
-  List.iter
-    (fun local_map ->
-      Hashtbl.iter
-        (fun pattern_key value ->
-          if Hashtbl.mem final_pattern_map pattern_key then
-            let existing = Hashtbl.find final_pattern_map pattern_key in
-            Hashtbl.replace final_pattern_map pattern_key (Int64.add existing value)
-          else
-            Hashtbl.add final_pattern_map pattern_key value
-        )
-        local_map
-    )
-    local_results;
+  (* Combine results with optimized iteration *)
+  List.iter (fun local_map ->
+    Hashtbl.iter (fun pattern_key value ->
+      match Hashtbl.find_opt final_pattern_map pattern_key with
+      | Some existing -> Hashtbl.replace final_pattern_map pattern_key (Int64.add existing value)
+      | None -> Hashtbl.add final_pattern_map pattern_key value
+    ) local_map
+  ) local_results;
   
-  (* Find maximum value *)
+  (* Use immediate maximum computation instead of fold for better branch prediction *)
   let max_value = ref 0L in
-  
-  Hashtbl.iter
-    (fun _ value ->
-      if Int64.compare value !max_value > 0 then
-        max_value := value
-    )
-    final_pattern_map;
+  Hashtbl.iter (fun _ value ->
+    if Int64.compare value !max_value > 0 then max_value := value
+  ) final_pattern_map;
   
   Domainslib.Task.teardown_pool pool;
   !max_value
