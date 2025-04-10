@@ -87,10 +87,9 @@ let () = run_test_tt_main suite
 let () =
   try
     (* Read input from stdin *)
-    let raw_input = In_channel.input_all In_channel.stdin in
-    let input = Str.global_replace (Str.regexp "\r\n") "\n" raw_input |> String.trim in
+    let input = In_channel.input_all In_channel.stdin |> String.trim in
     Printf.printf "Input length: %d\n%!" (String.length input);
-
+    
     (* Parse input into initial secrets *)
     let initial_secrets = parse input in
     Printf.printf "Number of initial secrets: %d\n%!" (Array.length initial_secrets);
