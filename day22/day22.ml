@@ -130,8 +130,15 @@ let part1 initial_secrets =
 *)
 let part2 initial_secrets =
   (* Create a task pool with a reasonable number of domains *)
-  let num_domains = Domain.recommended_domain_count () in
+  let num_domains = 
+    try int_of_string (Sys.getenv "NUMBER_OF_PROCESSORS") 
+    with _ -> 4 
+  in
+  let num_domains = max 2 (min num_domains 8) in
+  
+  (* Setup thread pool *)
   let pool = Task.setup_pool ~num_domains () in
+  
   
   Task.run pool (fun _ ->
     (* Step 1: Generate sequences in parallel *)
