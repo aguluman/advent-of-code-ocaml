@@ -45,31 +45,37 @@ let part1 (schematics : char array array list) =
   let h = Array.length (List.hd schematics) in
   let w = Array.length (List.hd schematics).(0) in
 
-  (* Extract locks *)
+  (* Convert locks and keys into arrays for faster indexing *)
   let locks = 
     List.filter (fun s -> Array.for_all ((=) '#') s.(0)) schematics
     |> List.map (fun s -> 
-      List.init w (fun j -> 
-        List.fold_left (fun acc i -> acc + if s.(i).(j) = '.' then 0 else 1) 0 (List.init h Fun.id)
+      Array.init w (fun j -> 
+        Array.fold_left (fun acc i -> acc + if s.(i).(j) = '.' then 0 else 1) 0 (Array.init h Fun.id)
       )
     )
   in
 
-  (* Extract keys *)
   let keys = 
     List.filter (fun s -> Array.for_all ((=) '.') s.(0)) schematics
     |> List.map (fun s -> 
-      List.init w (fun j -> 
-        List.fold_left (fun acc i -> acc + if s.(i).(j) = '.' then 0 else 1) 0 (List.init h Fun.id)
+      Array.init w (fun j -> 
+        Array.fold_left (fun acc i -> acc + if s.(i).(j) = '.' then 0 else 1) 0 (Array.init h Fun.id)
       )
     )
   in
 
-  (* Count valid lock-key pairs *)
-  List.concat (List.map (fun lock -> List.map (fun key -> (lock, key)) keys) locks)
-  |> List.filter (fun (lock, key) -> List.for_all (fun (l, k) -> l + k <= h) (List.combine lock key))
-  |> List.length
+  (* Count valid lock-key pairs using arrays instead of lists *)
+  Array.of_list locks
+  |> Array.fold_left (fun acc lock ->
+      acc + Array.fold_left (fun inner_acc key ->
+        if Array.for_all (fun i -> lock.(i) + key.(i) <= h) (Array.init w Fun.id) then
+          inner_acc + 1
+        else
+          inner_acc
+      ) 0 (Array.of_list keys)
+  ) 0
 ;;
+
 
 
 (** Parses the input string into a structured representation of lock and key schematics.
