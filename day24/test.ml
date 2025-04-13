@@ -109,8 +109,8 @@ let () =
     
     let end_time = Unix.gettimeofday () in
     
-    Printf.printf "Part 1: %Ld\n%!"result1;
-    Printf.printf "Part 2: %s\n%!" result2;
+    Printf.printf "Part 1: %Ld\n%!" result1;
+    Printf.printf "Part 2: %s (This output is incorrect)\n%!" result2;
     Printf.printf "Elapsed time: %.4f seconds\n%!" (end_time -. start_time);
     
   with
