@@ -31,8 +31,6 @@ let () = run_test_tt_main suite
 
 
 
-
-
 (* Main entry for day 14 algorithm *)
 let () =
   let input = In_channel.input_all In_channel.stdin |> String.trim in

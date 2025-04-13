@@ -201,16 +201,3 @@ let parse input =
   
 
 
-(** Main entry point *)
-let () =
-  In_channel.input_all In_channel.stdin
-  |> String.trim
-  |> parse
-  |> (fun garden_map ->
-      let start_time = Unix.gettimeofday () in
-
-      garden_map |> part1 |> Printf.printf "Part 1: %d\n";
-      garden_map |> part2 |> Printf.printf "Part 2: %d\n";
-
-      Unix.gettimeofday () -. start_time)
-  |> Printf.printf "Elapsed time: %.4f seconds\n"

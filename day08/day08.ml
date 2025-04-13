@@ -97,18 +97,3 @@ let parse input =
       Array.of_list (List.init (String.length row) (String.get row)))
   |> Array.of_list
 
-(** Main execution *)
-let () =
-  let input = In_channel.input_all In_channel.stdin |> String.trim in
-  let grid = parse input in
-
-  let timer_start = Unix.gettimeofday () in
-
-  grid |> part1 |> Printf.printf "Part 1: %d\n";
-  grid |> part2 |> Printf.printf "Part 2: %d\n";
-
-  let timer_end = Unix.gettimeofday () in
-
-  let elapsed = timer_end -. timer_start in
-
-  Printf.printf "Elapsed time: %.4f seconds\n" (elapsed)

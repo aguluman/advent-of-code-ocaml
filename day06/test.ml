@@ -41,3 +41,18 @@ let suite = "Day06 Test Suite" >::: [
 ]
 
 let () = run_test_tt_main suite
+
+(** Main entry point *)
+let () =
+  let input = In_channel.input_all In_channel.stdin |> parse in
+
+  let start_time = Unix.gettimeofday () in
+
+  let part1_result = part1 input in
+  Printf.printf "Part 1: %d\n" part1_result;
+
+  let part2_result = part2 input in
+  Printf.printf "Part 2: %d\n" part2_result;
+
+  let end_time = Unix.gettimeofday () in
+  Printf.printf "Elapsed time: %f seconds\n" (end_time -. start_time)

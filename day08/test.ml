@@ -38,3 +38,20 @@ let suite = "Day08 Test Suite" >::: [
 ]
 
 let () = run_test_tt_main suite
+
+
+(** Main execution *)
+let () =
+  let input = In_channel.input_all In_channel.stdin |> String.trim in
+  let grid = parse input in
+
+  let timer_start = Unix.gettimeofday () in
+
+  grid |> part1 |> Printf.printf "Part 1: %d\n";
+  grid |> part2 |> Printf.printf "Part 2: %d\n";
+
+  let timer_end = Unix.gettimeofday () in
+
+  let elapsed = timer_end -. timer_start in
+
+  Printf.printf "Elapsed time: %.4f seconds\n" (elapsed)

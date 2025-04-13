@@ -54,4 +54,16 @@ let suite = "all tests" >::: [
   part2_tests;
 ]
 
-let () = run_test_tt_main suite;
+let () = run_test_tt_main suite
+
+let () =
+  let input = In_channel.input_all In_channel.stdin |> String.trim in
+  let start_time = Unix.gettimeofday () in
+
+  let (rules, updates) = parse input in
+
+  part1 rules updates |> Printf.printf "Part 1: %d\n";
+  part2 rules updates |> Printf.printf "Part 2: %d\n";
+
+  let end_time = Unix.gettimeofday () in
+  Printf.printf "Elapsed time: %.4f seconds\n%!" (end_time -. start_time)

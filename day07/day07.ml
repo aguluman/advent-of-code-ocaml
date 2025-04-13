@@ -58,20 +58,3 @@ let parse input =
                |> List.to_seq )
          | _ -> failwith "Invalid input format")
 
-let () =
-  let input = 
-    In_channel.input_all In_channel.stdin 
-    |> String.trim
-  in
-  let equations = parse input in
-
-  let start_time = Unix.gettimeofday () in
-
-  equations |> part1 |> Printf.printf "Part 1: %Ld\n";
-
-  let part2_result = part2 equations in
-  Printf.printf "Part 2: %Ld\n" part2_result;
-
-  let end_time = Unix.gettimeofday () in
-  let elapsed = end_time -. start_time in
-  Printf.printf "Elapsed time: %.8f seconds\n" elapsed

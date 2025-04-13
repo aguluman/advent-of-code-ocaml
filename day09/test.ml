@@ -27,3 +27,18 @@ let suite = "Day09 Test Suite" >::: [
 ]
 
 let () = run_test_tt_main suite
+
+(** Main entry point - reads input, runs both function parts and prints results with timing *)
+let () =
+  stdin
+  |> input_line
+  |> parse
+  |> fun disk ->
+      let timer_start = Unix.gettimeofday () in
+      
+      disk |> part1 |> Printf.printf "Part 1: %Ld\n";
+      disk |> part2 |> Printf.printf "Part 2: %Ld\n";
+     
+      Unix.gettimeofday () -. timer_start
+
+  |> Printf.printf "Elapsed time: %.4f seconds\n"

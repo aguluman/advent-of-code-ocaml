@@ -1,0 +1,3 @@
+(executable
+ (name test)
+ (libraries base ounit2 str re domainslib))

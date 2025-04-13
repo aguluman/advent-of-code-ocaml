@@ -95,15 +95,3 @@ let parse input_string =
 
 
 
-(** Main program entry point *)
-let () =
-  let input_string = read_line () in
-  let initial_stones = parse input_string in
-  
-  let execution_start = Unix.gettimeofday () in 
-
-  initial_stones |> part1 |> Printf.printf "Part 1: %d\n";
-  initial_stones |> part2 |> Printf.printf "Part 2: %Ld\n";
-
-  Unix.gettimeofday () -. execution_start
-  |> Printf.printf "Elapsed time: %.4f seconds\n"

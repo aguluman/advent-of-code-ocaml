@@ -34,3 +34,20 @@ let suite = "Day10 Test Suite" >::: [
 ]
 
 let () = run_test_tt_main suite
+
+(** Main execution *)
+let () =
+  In_channel.input_all In_channel.stdin
+  |> String.trim
+  |> parse
+  
+  |> (fun height_map ->
+
+      let start_time = Unix.gettimeofday () in
+
+      height_map |> part1 |> Printf.printf "Part 1: %d\n";
+      height_map |> part2 |> Printf.printf "Part 2: %d\n";
+
+      Unix.gettimeofday () -. start_time)
+
+  |> Printf.printf "Elapsed time: %.4f seconds\n"

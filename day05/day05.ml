@@ -1,5 +1,4 @@
 open Base
-open Stdio
 
 let split_updates rules updates =
   let pages = 
@@ -92,20 +91,3 @@ let parse input =
 
   (rules, updates)
 
-let read_all_lines () =
-  let rec read_lines acc =
-    try
-      let line = In_channel.input_line_exn In_channel.stdin in
-      read_lines (line :: acc)
-    with
-    End_of_file -> List.rev acc
-  in
-  read_lines []
-  |> String.concat ~sep:"\n"
-
-let () =
-  read_all_lines ()
-  |> parse
-  |> (fun (rules, updates) -> 
-      printf "Part 1: %d\n" (part1 rules updates);
-      printf "Part 2: %d\n" (part2 rules updates))

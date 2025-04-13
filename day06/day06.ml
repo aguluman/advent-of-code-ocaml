@@ -144,17 +144,3 @@ let parse input =
   |> List.map (fun row -> Array.of_list (List.init (String.length row) (String.get row)))
   |> Array.of_list
 
-(** Main entry point *)
-let () =
-  let input = In_channel.input_all In_channel.stdin |> parse in
-
-  let start_time = Unix.gettimeofday () in
-
-  let part1_result = part1 input in
-  Printf.printf "Part 1: %d\n" part1_result;
-
-  let part2_result = part2 input in
-  Printf.printf "Part 2: %d\n" part2_result;
-
-  let end_time = Unix.gettimeofday () in
-  Printf.printf "Elapsed time: %f seconds\n" (end_time -. start_time)
