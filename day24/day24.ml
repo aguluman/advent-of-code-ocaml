@@ -1,14 +1,80 @@
+(** {1 Day 24: Crossed Wires - Boolean Logic Gate Simulation}
+
+    Solves Advent of Code 2024 Day 24 challenge about simulating boolean logic gates and
+    fixing a wiring issue in an electronic circuit. The implementation handles both the
+    circuit simulation and the diagnostic repair of mis-wired gates.
+    
+    {2 Problem details:}
+    
+    - {b Part 1:} Simulate a system of AND, OR, and XOR logic gates with their interconnections
+      to calculate a final decimal number from binary outputs on z-wires
+    - {b Part 2:} Identify and fix four pairs of gates whose output wires have been swapped,
+      preventing the circuit from correctly performing binary addition
+    
+    {2 The solution implements:}
+    
+    - Circuit simulation engine that processes gates in the correct order based on
+      input/output dependencies
+    - Circuit verification system that validates whether the circuit correctly
+      performs binary addition
+    - Search algorithm that identifies the gate pairs with swapped outputs
+    
+    See details at: {{:https://adventofcode.com/2024/day/24} Advent of Code 2024, Day 24}
+*)
+
+
+
+
+(** Represents the different types of boolean logic gates supported by the circuit.
+
+    The circuit simulation supports three fundamental boolean operations:
+    - {b And} - outputs 1 if both inputs are 1, otherwise 0
+    - {b Or} - outputs 1 if at least one input is 1, otherwise 0 
+    - {b Xor} - outputs 1 if inputs differ, otherwise 0
+*)
 type gate_operation =
   | And
   | Or
   | Xor
 
+
+(** Evaluates a boolean logic gate operation on two input values.
+
+    Applies the specified logic operation (AND, OR, or XOR) to the two input values
+    and returns the result. This function uses OCaml's bitwise operators to perform
+    the boolean logic operations efficiently.
+    
+    The function implements the three fundamental boolean operations used in the circuit:
+    
+    - {b And} (land) - outputs 1 if both inputs are 1, otherwise 0
+    - {b Or} (lor) - outputs 1 if at least one input is 1, otherwise 0
+    - {b Xor} (lxor) - outputs 1 if inputs differ, otherwise 0
+    
+    The bitwise operators ensure that the function works correctly for boolean values 
+    represented as integers.
+    
+    @param operation The logic operation to perform (And, Or, or Xor)
+    @param a The first input value (0 or 1)
+    @param b The second input value (0 or 1)
+    @return The result of applying the specified logic operation to the two inputs (0 or 1)
+*)
 let evaluate_gate operation a b =
   match operation with
   | And -> a land b  (* Bitwise AND *)
   | Or  -> a lor b   (* Bitwise OR *)
   | Xor -> a lxor b  (* Bitwise XOR *)
 
+
+
+(** Represents a logic gate in the circuit with its inputs, output, and operation type.
+
+    Each gate has:
+    - Two input wires identified by their string names
+    - One output wire identified by its string name
+    - An operation type (AND, OR, or XOR)
+    
+    Gates wait for both inputs to have values before producing an output.
+*)
 type gate = {
   input : string * string;
   operation : gate_operation;
@@ -16,6 +82,20 @@ type gate = {
 }
 
 
+
+(** Solves Part 1 by simulating the circuit and calculating the decimal value
+    from the binary outputs on z-wires.
+    
+    This function processes the circuit simulation and then:
+    
+  - 1. Identifies all wires whose names start with "z"
+  - 2. Orders them by numeric suffix (z00, z01, z02, etc.)
+  - 3. Interprets them as a binary number with z00 as the least significant bit
+  - 4. Converts the binary number to decimal
+    
+    @param wires_gates Tuple containing initial wire values and gates
+    @return The int64 number produced by the circuit
+*)
 let part1 (wires, gates) =
   (* Create a string map for evaluations *)
   let module StringMap = Map.Make(String) in
@@ -96,6 +176,23 @@ let part1 (wires, gates) =
   binary_to_int64 z_values
 
 
+    (** Solves Part 2 by identifying the four pairs of gates whose output wires have been swapped.
+  
+      This function implements a search algorithm to find the four pairs of gates that,
+      when their outputs are swapped, allow the circuit to correctly perform binary addition.
+      The approach involves:
+      
+    - 1. Building a validation function that tests if a circuit performs addition correctly
+    - 2. Detecting circuit structure patterns that should appear in a binary adder
+    - 3. Searching through possible gate combinations to identify the swapped pairs
+    - 4. Verifying the solution by checking that the circuit works for all valid inputs
+      
+      The search employs cycle detection and structural validation to efficiently
+      identify the correct swaps without testing all possible combinations.
+      
+      @param wires_gates Tuple containing initial wire values and gates
+      @return Comma-separated string of the eight wire names involved in the swaps, sorted alphabetically
+  *)
 let part2 (_wires, gates) =
   let module StringMap = Map.Make(String) in
 
@@ -186,7 +283,18 @@ let part2 (_wires, gates) =
 
 
 
+(** Parses the input text into initial wire values and a collection of gates.
 
+    The input has two sections:
+    - Initial wire values in the format "wire: value" where value is 0 or 1
+    - Gate definitions in the format "inputA OPERATION inputB -> output"
+    
+    The parser handles all three operation types (AND, OR, XOR) and creates
+    a data structure representing the complete circuit.
+    
+    @param input The input text containing wire initializations and gate definitions
+    @return A tuple containing initial wire values and a list of gates
+*)
 let parse input =
   let normalized_input = Str.global_replace (Str.regexp "\r\n") "\n" input in
   let sections = Str.split (Str.regexp "\n\n") normalized_input in

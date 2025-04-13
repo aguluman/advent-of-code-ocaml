@@ -54,10 +54,10 @@ let are_triangle a b c connections =
     ensuring that at least one node name starts with 't'.
 
     Algorithm:
-    1. Iterate through each node and its neighbors
-    2. For each pair of neighbors, verify if they form a connected triple
-    3. Ensure no triple is counted more than once by using a sorted tuple set
-    4. Increment count only if at least one node in the set begins with 't'
+  - 1. Iterate through each node and its neighbors
+  - 2. For each pair of neighbors, verify if they form a connected triple
+  - 3. Ensure no triple is counted more than once by using a sorted tuple set
+  - 4. Increment count only if at least one node in the set begins with 't'
 
     @param connections Adjacency map representing node connections
     @return The total count of qualifying connected triples
@@ -96,11 +96,11 @@ let part1 connections =
 (** Finds the largest clique (fully connected group) in the network.
 
     The clique identification involves the following steps:
-    1. Begin with each node and iteratively attempt to add other nodes that 
+  - 1. Begin with each node and iteratively attempt to add other nodes that 
        connect to every node in the existing group
-    2. Continue recursively until no further nodes can be added
-    3. Keep track of the largest clique found throughout the process
-    4. Return this largest clique sorted alphabetically as the final password
+  - 2. Continue recursively until no further nodes can be added
+  - 3. Keep track of the largest clique found throughout the process
+  - 4. Return this largest clique sorted alphabetically as the final password
 
     @param connections Adjacency map representing node connections
     @return A comma-separated, alphabetically sorted string of the nodes 

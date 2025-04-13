@@ -1,6 +1,13 @@
-(** Test suite for Day 24: Logic Gate Circuit
-    Tests the solution using example circuit inputs.
+(** Unit tests for the Day 24 solution using the OUnit2 framework.
+
+    Tests validate:
+    - Correct parsing of input data
+    - Accurate circuit simulation results
+    - Proper identification of swapped gate outputs
+    
+    Each test uses small, manageable examples to verify distinct aspects of the solution.
 *)
+
 open OUnit2
 open Day24
 
@@ -73,7 +80,15 @@ let suite = "Day24 Test Suite" >::: [
 (** Run the tests *)
 let () = run_test_tt_main suite
 
-(** Main entry point for solution *)
+(** Main execution function that runs both parts of the Day 24 challenge.
+
+    This function:
+    
+  - 1. Parses the input file
+  - 2. Runs Part 1 to simulate the circuit and calculate the output value
+  - 3. Runs Part 2 to identify the swapped gate outputs
+  - 4. Reports timing and results
+*)
 let () =
   try
     (* Read input from stdin *)
