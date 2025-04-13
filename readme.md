@@ -16,3 +16,6 @@ The command used on Linux OS to read the input file and run the code is:
 ```
   cat "C:\path\to\your\input.txt" | dune exec ./test.exe
 ```
+
+### Note
+The parse function for each challenge question’s input file was designed to handle the ```CRLF``` end of line sequence.

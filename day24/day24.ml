@@ -16,178 +16,175 @@ type gate = {
 }
 
 
-let evaluate wires gates =
-  (* Create dependency graph *)
-  let deps = Hashtbl.create (List.length gates) in
-  let waiting = Hashtbl.create (List.length gates) in
-  
-  (* Initialize dependency tracking *)
-  List.iter (fun g ->
-    let input1, input2 = g.input in
-    Hashtbl.add waiting g.output (input1, input2);
-    List.iter (fun input -> 
-      let deps_list = try Hashtbl.find deps input with Not_found -> [] in
-      Hashtbl.replace deps input (g.output :: deps_list)
-    ) [input1; input2]
-  ) gates;
-
-  (* Process gates in dependency order *)
-  let rec process_ready () =
-    let ready = Hashtbl.fold (fun output (in1, in2) acc ->
-      if Hashtbl.mem wires in1 && Hashtbl.mem wires in2 then
-        (output, (in1, in2)) :: acc
-      else acc
-    ) waiting [] in
-    
-    match ready with
-    | [] -> wires
-    | _ ->
-        List.iter (fun (output, (in1, in2)) ->
-          let g = List.find (fun g -> g.output = output) gates in
-          let result = evaluate_gate g.operation 
-            (Hashtbl.find wires in1) 
-            (Hashtbl.find wires in2) in
-          Hashtbl.add wires output result;
-          Hashtbl.remove waiting output
-        ) ready;
-        process_ready ()
-  in
-  process_ready ()
-;;
-
-
-let extract_result wires =
-  (* Pre-calculate max z-wire index *)
-  let max_z = Hashtbl.fold (fun key _ acc ->
-    if String.starts_with ~prefix:"z" key then
-      max acc (int_of_string (String.sub key 1 (String.length key - 1)))
-    else acc
-  ) wires 0 in
-  
-  (* Build result directly as int *)
-  let rec build_num i acc =
-    if i < 0 then acc
-    else
-      let wire_name = Printf.sprintf "z%02d" i in
-      let bit = if Hashtbl.mem wires wire_name then Hashtbl.find wires wire_name else 0 in
-      build_num (i-1) ((acc lsl 1) lor bit)
-  in
-  build_num max_z 0
-;;
-
-
 let part1 (wires, gates) =
-  let wire_table = Hashtbl.create 100 in
-  List.iter (fun (key, value) -> Hashtbl.add wire_table key value) wires;
-  let final_state = evaluate wire_table gates in
-  Int64.of_int (extract_result final_state)
-;;
-
-
-
-let has_loop gate_map =
-  let rec dfs out path =
-    if List.mem out path then true
-    else match Hashtbl.find_opt gate_map out with
-    | None -> false
-    | Some g ->
-        let left, right = g.input in
-        dfs left (out :: path) || dfs right (out :: path)
+  (* Create a string map for evaluations *)
+  let module StringMap = Map.Make(String) in
+  
+  (* Convert wires list to a map *)
+  let initial_eval = 
+    List.fold_left
+      (fun map (name, value) -> StringMap.add name value map)
+      StringMap.empty
+      wires
   in
-  Hashtbl.fold (fun key _ acc -> acc || dfs key []) gate_map false
-;;
-
-let rec collect out gate_map =
-  match Hashtbl.find_opt gate_map out with
-  | None -> []
-  | Some g ->
-      let left, right = g.input in
-      out :: (collect left gate_map @ collect right gate_map)
-;;
-
-let rec make out gate_map =
-  match Hashtbl.find_opt gate_map out with
-  | None -> out
-  | Some g ->
-      let left, right = make (fst g.input) gate_map, make (snd g.input) gate_map in
-      let left, right = min left right, max left right in
-      match g.operation with
-      | And -> "(" ^ left ^ ")and(" ^ right ^ ")"
-      | Or -> "(" ^ left ^ ")or(" ^ right ^ ")"
-      | Xor -> "(" ^ left ^ ")xor(" ^ right ^ ")"
-;;
-
-let validate out gate_map =
-  let circuit = make out gate_map in
-  let valid_xy = 
-    let regex_xy = Str.regexp "[xy][0-9]+" in
-    let xy_matches = Str.full_split regex_xy circuit |> List.filter_map (function
-      | Str.Text _s -> None
-      | Str.Delim s -> Some s) in
-    match xy_matches with
-    | [] -> true
-    | "x00" :: "y00" :: t ->
-        let pairs = List.filteri (fun i _ -> i mod 2 = 0) t in
-        List.for_all (fun i -> List.nth pairs i = "x" ^ string_of_int i && List.nth pairs (i+1) = "y" ^ string_of_int i) (List.init (List.length pairs / 2) (fun i -> i))
-    | _ -> false
-  in
-  let valid_operations =
-    let regex_ops = Str.regexp "\\(and\\|or\\|xor\\)" in
-    let ops_matches = Str.full_split regex_ops circuit |> List.filter_map (function
-      | Str.Text _s -> None
-      | Str.Delim s -> Some s) in
-    match ops_matches with
-    | [] -> true
-    | ["xor"] -> true
-    | "and" :: t ->
-      let chunks = Array.of_list (List.filteri (fun i _ -> i mod 4 = 0) t) in
-      List.for_all (fun i ->
-        if i + 1 < Array.length chunks then
-          chunks.(i) = "and" && chunks.(i+1) = "xor" && chunks.(i+2) = "or" && chunks.(i+3) = "and"
-        else
-          chunks.(i) = "xor" && chunks.(i+1) = "xor"
-      ) (List.init (Array.length chunks / 4) (fun i -> i))
-    | _ -> false
-  in
-  valid_xy && valid_operations
-;;
-
-let rec search i gate_map =
-  if i >= 45 then Some gate_map
-  else
-    let out = "z" ^ string_of_int i in
-    if validate out gate_map then search (i + 1) gate_map
+  
+  (* Recursive function to process gates *)
+  let rec run eval gates =
+    if gates = [] then
+      eval
     else
-      let swaps = collect out gate_map in
-      List.find_map (fun _swap ->
-        Hashtbl.fold (fun out' g' acc ->
-          let g = Hashtbl.find gate_map out in
-          let new_gate_map = Hashtbl.copy gate_map in
-          Hashtbl.replace new_gate_map out g';
-          Hashtbl.replace new_gate_map out' g;
-          if not (has_loop new_gate_map) then
-            match List.find_opt (fun j -> not (validate ("z" ^ string_of_int j) new_gate_map)) (List.init 45 (fun j -> j)) with
-            | Some next_invalid when i < next_invalid -> search next_invalid new_gate_map
-            | _ -> acc
-          else acc
-        ) gate_map None
-      ) swaps
-;;
+      let eval', remaining_gates = 
+        List.fold_left 
+          (fun (curr_eval, remaining) gate ->
+            let input1, input2 = gate.input in
+            if StringMap.mem input1 curr_eval && StringMap.mem input2 curr_eval then
+              let input1_val = StringMap.find input1 curr_eval in
+              let input2_val = StringMap.find input2 curr_eval in
+              let out = evaluate_gate gate.operation input1_val input2_val in
+              (StringMap.add gate.output out curr_eval, remaining)
+            else
+              (curr_eval, gate :: remaining)
+          ) 
+          (eval, []) 
+          gates 
+      in
+      run eval' remaining_gates
+  in
+  
+  (* Run the simulation *)
+  let final_eval = run initial_eval gates in
+  
+  (* Extract 'z' wires and convert to binary string *)
+  let z_wires =
+    StringMap.fold 
+      (fun k v acc -> 
+        if String.length k > 0 && k.[0] = 'z' then
+          (k, v) :: acc
+        else 
+          acc
+      ) 
+      final_eval 
+      []
+  in
+  
+    let z_values =
+      let z_array = Array.of_list z_wires 
+    in
+      Array.sort (fun (k1, _) (k2, _) -> compare k2 k1) z_array;
+      
+      let buffer = Buffer.create 16 
+    in  (* Initial size estimate *)
+      Array.iter (fun (_, v) -> Buffer.add_string buffer (string_of_int v)) z_array;
+      Buffer.contents buffer
+    in
+  
+  (* Convert binary string to int64 *)
+  let binary_to_int64 s =
+    match s with
+    | "" -> Int64.zero
+    | _ ->
+        let len = String.length s in
+        let rec convert idx acc =
+          if idx = len then acc
+          else
+            let bit = if s.[idx] = '1' then 1L else 0L in
+            convert (idx + 1) (Int64.(add (shift_left acc 1) bit))
+        in
+        convert 0 0L
+  in
+  
+  binary_to_int64 z_values
+
 
 let part2 (_wires, gates) =
-  let gate_map = Hashtbl.create 100 in
-  List.iter (fun g -> Hashtbl.add gate_map g.output g) gates;
-  match search 0 gate_map with
-  | None -> ""
-  | Some correct_gate_map ->
-      let diff = Hashtbl.fold (fun out g acc ->
-        if Hashtbl.mem correct_gate_map out then
-          let g' = Hashtbl.find correct_gate_map out in
-          if g <> g' then out :: acc else acc
-        else acc
-      ) gate_map [] in
-      String.concat "," (List.sort compare diff)
-;;
+  let module StringMap = Map.Make(String) in
+
+  (* Create initial gate map *)
+  let gate_by_out = 
+    List.fold_left
+      (fun map g -> StringMap.add g.output g map)
+      StringMap.empty
+      gates
+  in
+
+  (* Focus on z-wires and their immediate connections *)
+  let z_gates = 
+    List.filter (fun g -> 
+      String.length g.output > 0 && g.output.[0] = 'z'
+    ) gates
+  in
+
+  (* Get all gates connected to a z-gate *)
+  let connected_gates = 
+    let seen = Hashtbl.create 256 in
+    let rec get_connections g =
+      if not (Hashtbl.mem seen g.output) then begin
+        Hashtbl.add seen g.output true;
+        let left, right = g.input in
+        match StringMap.find_opt left gate_by_out, StringMap.find_opt right gate_by_out with
+        | Some g1, Some g2 -> g :: get_connections g1 @ get_connections g2
+        | Some g1, None -> g :: get_connections g1
+        | None, Some g2 -> g :: get_connections g2
+        | None, None -> [g]
+      end else []
+    in
+    List.concat (List.map get_connections z_gates)
+  in
+
+  (* Try swapping gates in smaller groups *)
+  let rec try_combinations tried_swaps gates remaining_count =
+    if remaining_count = 0 then 
+      Some tried_swaps
+    else
+      let rec try_pairs g1 rest =
+        match rest with
+        | [] -> None
+        | g2 :: rest' ->
+            (* Create new configuration with swapped outputs *)
+            let new_map = 
+              gate_by_out 
+              |> StringMap.add g1.output g2
+              |> StringMap.add g2.output g1
+            in
+            
+            (* Quick validation of just affected outputs *)
+            let is_valid = 
+              List.for_all 
+                (fun g -> 
+                  let out = Printf.sprintf "z%02d" (int_of_string (String.sub g.output 1 2)) in
+                  StringMap.mem out new_map)
+                z_gates
+            in
+            
+            if is_valid then
+              match try_combinations 
+                ((g1.output, g2.output) :: tried_swaps) 
+                rest' 
+                (remaining_count - 1) with
+              | Some result -> Some result
+              | None -> try_pairs g1 rest'
+            else
+              try_pairs g1 rest'
+      in
+      
+      match gates with
+      | [] -> None
+      | g :: rest -> 
+          match try_pairs g rest with
+          | Some result -> Some result
+          | None -> try_combinations tried_swaps rest remaining_count
+  in
+
+  (* Try to find 4 pairs of swaps *)
+  match try_combinations [] connected_gates 4 with
+  | None -> "No solution found"
+  | Some swaps ->
+      let all_wires = 
+        List.flatten (List.map (fun (w1, w2) -> [w1; w2]) swaps)
+      in
+      List.sort String.compare all_wires |> String.concat ","
+
+
 
 
 let parse input =
