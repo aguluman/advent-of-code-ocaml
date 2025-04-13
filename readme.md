@@ -21,4 +21,4 @@ The command used on Linux OS to read the input file and run the code is:
 - The parse function for each challenge question’s input file was designed to handle the ```CRLF``` end of line sequence.
 
 - This solution to day 24 part two challenge question is wrong. ` I have not been able to figure out a solution to achieve the    correct. 
-- ```I need help```. If you have the knowledge or information please create a ```Pull Request```.
+- ```I need help```. If you have the knowledge or information please create a [Pull Request](https://github.com/aguluman/advent-of-code-2024-ocaml/pulls).
