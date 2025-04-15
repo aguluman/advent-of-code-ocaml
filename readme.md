@@ -20,6 +20,6 @@ The command used on Linux OS to read the input file and run the code is:
 ### Note
 - The parse function for each challenge question’s input file was designed to handle the ```CRLF``` end of line sequence.
 
-- My solution to day 24 part two challenge question is wrong. I have not been able to figure out a solution to achieve the correct answer.
+- My solution to [day 24 part two challenge question is wrong](https://github.com/aguluman/advent-of-code-2024-ocaml/issues/1). I have not been able to figure out a solution to achieve the correct answer.
 
 - ```I need help```. If you have the knowledge or information please create a [Pull Request](https://github.com/aguluman/advent-of-code-2024-ocaml/pulls).
