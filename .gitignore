@@ -28,3 +28,13 @@ _opam/
 # System specific
 .DS_Store
 Thumbs.db
+
+# Local configuration
+.env
+.env.local
+
+# Design docs
+/docs
+
+#inputs and answers files
+**/*.txt
