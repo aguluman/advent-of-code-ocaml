@@ -1,4 +1,4 @@
-.PHONY: all build test release lint clean setup new-day run-day help benchmark fmt check run-release run-current download check-status submit run-submit
+.PHONY: all build test release lint clean setup new-day run-day help benchmark benchmark-% fmt check run-release run-current download check-status submit run-submit
 
 # Default target
 all: test lint
@@ -27,11 +27,13 @@ build:
 		echo "Building $$day..."; \
 		cd $$day && dune build && cd ../..; \
 	done
+	@echo "✅ All days built successfully!"
 
 # Build a specific day
 build-%:
 	@echo "Building day $*..."
 	@cd $(YEAR)/day$* && dune build
+	@echo "✅ Day $* built successfully!"
 
 # Build all days in release mode
 release:
@@ -40,6 +42,7 @@ release:
 		echo "Building $$day in release mode..."; \
 		cd $$day && dune build --profile release && cd ../..; \
 	done
+	@echo "✅ All days built successfully in release mode!"
 
 # Run tests for all days
 test:
@@ -68,6 +71,7 @@ fmt:
 			cd $(YEAR)/$$day && find . -name "*.ml" -o -name "*.mli" | xargs ocamlformat --enable-outside-detected-project --inplace && cd ../..; \
 		fi; \
 	done
+	@echo "✅ All code formatted successfully!"
 
 # Check formatting for all code
 fmt-check:
@@ -78,6 +82,7 @@ fmt-check:
 			cd $(YEAR)/$$day && find . -name "*.ml" -o -name "*.mli" | xargs ocamlformat --enable-outside-detected-project --check && cd ../..; \
 		fi; \
 	done
+	@echo "✅ All code formatting is correct!"
 
 # Run code checks
 check:
@@ -86,6 +91,7 @@ check:
 		echo "Checking $$day..."; \
 		cd $$day && dune build && cd ../..; \
 	done
+	@echo "✅ All code checks passed!"
 
 # Run benchmarks for all days using hyperfine
 benchmark:
@@ -107,6 +113,52 @@ benchmark:
 	done
 	@echo "Benchmark results exported to benchmark_dayXX.md files"
 
+# Run benchmark for a specific day using hyperfine
+benchmark-%:
+	@echo "Running benchmark for day $*..."
+	@if [ ! -d "$(YEAR)/day$*" ]; then \
+		echo "Day $* directory not found!"; \
+		exit 1; \
+	fi; \
+	if [ -f "inputs/$(YEAR)/day$*.txt" ]; then \
+		INPUT_FILE="inputs/$(YEAR)/day$*.txt"; \
+		echo "Using input file: $$INPUT_FILE"; \
+		cd $(YEAR)/day$* && \
+		echo "Building in release mode..."; \
+		dune build --profile release && \
+		echo "Running hyperfine benchmark..."; \
+		hyperfine --warmup 3 --runs 10 \
+			--export-markdown "../../benchmark_day$*.md" \
+			"cat ../../$$INPUT_FILE | dune exec --profile release ./test.exe" && \
+		cd ../../; \
+		echo "✅ Benchmark completed for day $*!"; \
+		echo "Results exported to benchmark_day$*.md"; \
+	else \
+		echo "No input file found for day $*. Expected: inputs/$(YEAR)/day$*.txt"; \
+		echo "You can download it with: make download DAY=$*"; \
+		exit 1; \
+	fi
+
+# Run benchmark for a specific day using hyperfine
+benchmark-%:
+	@echo "Running benchmark for day $*..."
+	@if [ ! -d "$(YEAR)/day$*" ]; then \
+		echo "Day $* does not exist!"; \
+		exit 1; \
+	fi; \
+	if [ ! -f "inputs/$(YEAR)/day$*.txt" ]; then \
+		echo "No input file found for day $*, skipping benchmark"; \
+		echo "Expected file: inputs/$(YEAR)/day$*.txt"; \
+		exit 1; \
+	fi; \
+	echo "Using input file: inputs/$(YEAR)/day$*.txt"; \
+	cd $(YEAR)/day$* && \
+	dune build --profile release && \
+	hyperfine --warmup 3 --runs 10 \
+		--export-markdown "../../benchmark_day$*.md" \
+		"cat ../../inputs/$(YEAR)/day$*.txt | dune exec --profile release ./test.exe"; \
+	echo "✅ Benchmark results exported to benchmark_day$*.md"
+
 # Clean all build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
@@ -114,6 +166,7 @@ clean:
 		echo "Cleaning $$day..."; \
 		cd $$day && dune clean && cd ../..; \
 	done
+	@echo "✅ All build artifacts cleaned successfully!"
 
 # Create a new day from template
 new-day:
@@ -187,6 +240,7 @@ setup:
 		echo '(executable\n (name test_template)\n (libraries base stdio ounit2 str))' > day_template/dune; \
 		echo '(lang dune 3.0)' > day_template/dune-project; \
 	fi
+	@echo "✅ Project setup completed successfully!"
 
 # Run a specific day with input file
 run-day:
@@ -249,7 +303,12 @@ run-release:
 		echo "Please specify an input file with INPUT=path/to/input.txt"; \
 		exit 1; \
 	fi; \
-	if [ "$(INPUT)" = "puzzle_input" ]; then \
+	if [ "$(INPUT)" = "download" ]; then \
+		echo "Downloading input for day $(DAY)..."; \
+		$(MAKE) download DAY=$(DAY); \
+		INPUT_PATH="$(PWD)/inputs/$(YEAR)/day$(DAY).txt"; \
+		echo "Using downloaded input file: $$INPUT_PATH"; \
+	elif [ "$(INPUT)" = "puzzle_input" ]; then \
 		if [ ! -d "inputs/$(YEAR)" ]; then \
 			echo "Notice: Repository inputs directory not found."; \
 			echo "Creating directory: inputs/$(YEAR)"; \
@@ -277,26 +336,16 @@ run-release:
 	else \
 		INPUT_PATH="$(INPUT)"; \
 	fi; \
+	if [ ! -f "$$INPUT_PATH" ]; then \
+		echo "Input file not found: $$INPUT_PATH"; \
+		exit 1; \
+	fi; \
 	echo "Building and running day$(DAY) in release mode with input $$INPUT_PATH..."; \
 	cd $(YEAR)/day$(DAY) && dune build --profile release && \
-	if [ "$(shell uname -s)" = "Linux" ] || [ -d "/mnt/c" ]; then \
-		case "$$INPUT_PATH" in \
-			/*) cat $$INPUT_PATH | dune exec --profile release ./test.exe ;; \
-			*) cat $(PWD)/$$INPUT_PATH | dune exec --profile release ./test.exe ;; \
-		esac; \
-	else \
-		if command -v type >/dev/null 2>&1; then \
-			case "$$INPUT_PATH" in \
-				/*) type "$$INPUT_PATH" | dune exec --profile release ./test.exe ;; \
-				*) type "$(PWD)/$$INPUT_PATH" | dune exec --profile release ./test.exe ;; \
-			esac; \
-		else \
-			case "$$INPUT_PATH" in \
-				/*) cat "$$INPUT_PATH" | dune exec --profile release ./test.exe ;; \
-				*) cat "$(PWD)/$$INPUT_PATH" | dune exec --profile release ./test.exe ;; \
-			esac; \
-		fi; \
-	fi
+	case "$$INPUT_PATH" in \
+		/*) cat "$$INPUT_PATH" | dune exec --profile release ./test.exe ;; \
+		*) cat "$(PWD)/$$INPUT_PATH" | dune exec --profile release ./test.exe ;; \
+	esac
 
 # Run the current day (most recent) with input file
 run-current:
@@ -620,6 +669,8 @@ help:
 	@echo "  fmt-check       : Check formatting for all code"
 	@echo "  check           : Run dune build for all days"
 	@echo "  benchmark       : Run benchmarks for all days (if available)"
+	@echo "  benchmark-XX    : Run benchmark for a specific day (e.g., benchmark-09)"
+	@echo "  benchmark-XX    : Run benchmark for a specific day (e.g., benchmark-09)"
 	@echo "  clean           : Clean all build artifacts"
 	@echo "  new-day         : Create a new day from template (interactive)"
 	@echo "  setup           : Setup project from scratch"
