@@ -1,9 +1,41 @@
+(** Day 09: Disk Fragmenter
+
+    Solves the disk defragmentation problem by compacting files and calculating checksums.
+    
+    {2 Problem Summary:}
+    - {b Part 1:} Compact files by moving individual blocks from right to left to fill gaps
+    - {b Part 2:} Move entire contiguous files to the leftmost available free space
+    
+    See details at: {{:https://adventofcode.com/2024/day/09} Advent of Code 2024, Day 09}
+*)
+
 (** Type representing a disk block - either Free or Occupied with a file_id *)
 type block =
   | Free
   | Occupied of int (* file_id *)
 
-
+(** Parse input string into disk block array
+    @param input String of alternating file sizes and free space lengths
+    @return Array of disk blocks *)
+let parse input =
+  input
+  |> String.to_seq
+  |> Array.of_seq
+  |> fun digits ->
+      let disk_blocks = ref [] in
+      digits |> Array.iteri (fun integer character ->
+        let block_length = int_of_char character - int_of_char '0' in
+        let block_type = 
+          if integer mod 2 = 0 
+          then Occupied(integer/2) 
+          else Free in
+        for _ = 1 to block_length do
+          disk_blocks := block_type :: !disk_blocks
+        done
+      );
+      !disk_blocks
+  |> List.rev
+  |> Array.of_list
 
 (** Calculate filesystem checksum by multiplying block positions with file IDs
     @param disk Array of disk blocks
@@ -17,13 +49,13 @@ let checksum disk =
            (Int64.of_int i) |> Int64.mul (Int64.of_int file_id))
   |> Array.fold_left Int64.add 0L
 
-
-
-
-(** Part 1: Compact files from right to left, filling gaps
-    @param disk Array of disk blocks
-    @return Int64 checksum of compacted disk *)
-let part1 disk =
+(** [part1 input] solves part 1 of the challenge - Compact files from right to left, filling gaps
+    
+    @param input Raw input string from the puzzle
+    @return Solution for part 1 as Int64
+*)
+let part1 input =
+  let disk = parse input in
   disk
   |> Array.copy
   |> fun disk_copy -> 
@@ -45,12 +77,13 @@ let part1 disk =
       compact 0 (Array.length disk_copy - 1) disk_copy
   |> checksum
 
-
-
-(** Part 2: Move contiguous file blocks to first available free space
-    @param disk Array of disk blocks 
-    @return Int64 checksum of reorganized disk *)
-let part2 disk =
+(** [part2 input] solves part 2 of the challenge - Move contiguous file blocks to first available free space
+    
+    @param input Raw input string from the puzzle
+    @return Solution for part 2 as Int64
+*)
+let part2 input =
+  let disk = parse input in
   let rec compact right_pos disk =
     if right_pos <= 0 then disk
     else match disk.(right_pos) with
@@ -94,31 +127,3 @@ let part2 disk =
     let disk_copy = Array.copy disk 
   in
     checksum (compact (Array.length disk_copy - 1) disk_copy)
-
-
-
-(** Parse input string into disk block array
-    @param input String of alternating file sizes and free space lengths
-    @return Array of disk blocks *)
-let parse input =
-  input
-  |> String.to_seq
-  |> Array.of_seq
-  |> fun digits ->
-      let disk_blocks = ref [] in
-      digits |> Array.iteri (fun integer character ->
-        let block_length = int_of_char character - int_of_char '0' in
-        let block_type = 
-          if integer mod 2 = 0 
-          then Occupied(integer/2) 
-          else Free in
-        for _ = 1 to block_length do
-          disk_blocks := block_type :: !disk_blocks
-        done
-      );
-      !disk_blocks
-  |> List.rev
-  |> Array.of_list
-
-
-

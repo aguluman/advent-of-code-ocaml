@@ -35,6 +35,7 @@ Thumbs.db
 
 # Design docs
 /docs
+/benchmark
 
 #inputs and answers files
 **/*.txt
