@@ -25,7 +25,7 @@ pkgs.mkShell {
     ] ++ opam-packages ++ [
     
     # Development tools
-    watchexec        # For file watching (equivalent to cargo-watch)
+    watchexec        # For file watching
     hyperfine        # For benchmarking
     
     # Additional dependencies
@@ -39,7 +39,7 @@ pkgs.mkShell {
 
   # Shell hook to setup environment
   shellHook = ''
-    echo "🐪 Advent of Code 2024 - OCaml Development Environment 🐪"
+    echo "🐪 Advent of Code - OCaml Development Environment 🐪"
     echo "Run 'make help' to see available commands."
     echo "OCaml version: $(ocaml -version)"
     echo "Dune version: $(dune --version)"

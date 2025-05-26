@@ -45,7 +45,7 @@ pkgs.stdenv.mkDerivation {
   '';
   
   meta = with pkgs.lib; {
-    description = "Solutions for Advent of Code 2024 in OCaml";
+    description = "Solutions for Advent of Code Questions in OCaml";
     homepage = "https://github.com/aguluman/advent-of-code-ocaml";
     license = licenses.mit;  
     maintainers = [ "Chukwuma Akunyili" ];
