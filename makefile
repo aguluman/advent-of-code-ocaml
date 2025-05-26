@@ -96,6 +96,7 @@ check:
 # Run benchmarks for all days using hyperfine
 benchmark:
 	@echo "Running benchmarks for all days using hyperfine..."
+	@mkdir -p benchmark
 	@for day in $(DAYS); do \
 		echo "Benchmarking $$day..."; \
 		if [ -f "inputs/$(YEAR)/$$(basename $$day).txt" ]; then \
@@ -104,18 +105,19 @@ benchmark:
 			cd $$day && \
 			dune build --profile release && \
 			hyperfine --warmup 3 --runs 10 \
-				--export-markdown "../benchmark_$$(basename $$day).md" \
+				--export-markdown "../../benchmark/benchmark_$$(basename $$day).md" \
 				"cat ../$$INPUT_FILE | dune exec --profile release ./test.exe" && \
 			cd ../..; \
 		else \
 			echo "No input file found for $$day, skipping benchmark"; \
 		fi; \
 	done
-	@echo "Benchmark results exported to benchmark_dayXX.md files"
+	@echo "Benchmark results exported to benchmark/benchmark_dayXX.md files"
 
 # Run benchmark for a specific day using hyperfine
 benchmark-%:
 	@echo "Running benchmark for day $*..."
+	@mkdir -p benchmark
 	@if [ ! -d "$(YEAR)/day$*" ]; then \
 		echo "Day $* directory not found!"; \
 		exit 1; \
@@ -128,36 +130,17 @@ benchmark-%:
 		dune build --profile release && \
 		echo "Running hyperfine benchmark..."; \
 		hyperfine --warmup 3 --runs 10 \
-			--export-markdown "../../benchmark_day$*.md" \
+				--export-markdown "../../benchmark/benchmark_day$*.md" \
 			"cat ../../$$INPUT_FILE | dune exec --profile release ./test.exe" && \
 		cd ../../; \
 		echo "✅ Benchmark completed for day $*!"; \
-		echo "Results exported to benchmark_day$*.md"; \
+		echo "Results exported to benchmark/benchmark_day$*.md"; \
 	else \
 		echo "No input file found for day $*. Expected: inputs/$(YEAR)/day$*.txt"; \
 		echo "You can download it with: make download DAY=$*"; \
 		exit 1; \
 	fi
 
-# Run benchmark for a specific day using hyperfine
-benchmark-%:
-	@echo "Running benchmark for day $*..."
-	@if [ ! -d "$(YEAR)/day$*" ]; then \
-		echo "Day $* does not exist!"; \
-		exit 1; \
-	fi; \
-	if [ ! -f "inputs/$(YEAR)/day$*.txt" ]; then \
-		echo "No input file found for day $*, skipping benchmark"; \
-		echo "Expected file: inputs/$(YEAR)/day$*.txt"; \
-		exit 1; \
-	fi; \
-	echo "Using input file: inputs/$(YEAR)/day$*.txt"; \
-	cd $(YEAR)/day$* && \
-	dune build --profile release && \
-	hyperfine --warmup 3 --runs 10 \
-		--export-markdown "../../benchmark_day$*.md" \
-		"cat ../../inputs/$(YEAR)/day$*.txt | dune exec --profile release ./test.exe"; \
-	echo "✅ Benchmark results exported to benchmark_day$*.md"
 
 # Clean all build artifacts
 clean:
@@ -669,7 +652,6 @@ help:
 	@echo "  fmt-check       : Check formatting for all code"
 	@echo "  check           : Run dune build for all days"
 	@echo "  benchmark       : Run benchmarks for all days (if available)"
-	@echo "  benchmark-XX    : Run benchmark for a specific day (e.g., benchmark-09)"
 	@echo "  benchmark-XX    : Run benchmark for a specific day (e.g., benchmark-09)"
 	@echo "  clean           : Clean all build artifacts"
 	@echo "  new-day         : Create a new day from template (interactive)"
