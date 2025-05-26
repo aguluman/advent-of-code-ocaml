@@ -467,7 +467,7 @@ submit:
 			RESPONSE=$$(curl -s --cookie "session=$$SESSION_TOKEN" \
 				-H "User-Agent: github.com/advent-of-code-ocaml" \
 				"https://adventofcode.com/$(YEAR)/day/$$DAY_NUM"); \
-			if echo "$$RESPONSE" | grep -q "You have completed Part One!"; then \
+			if echo "$$RESPONSE" | grep -q "one gold star: \*\|You have completed Part One"; then \
 				echo "Part 1 is completed. Proceeding with Part 2 submission."; \
 			else \
 				echo "You need to complete Part 1 before submitting Part 2."; \
