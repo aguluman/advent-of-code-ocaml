@@ -137,6 +137,19 @@ You can find your session token by:
 - `answers/2024/` - Generated answers for submission
 - `benchmark/` - Benchmark results
 
+
+## Development Setup
+
+### With Nix Flakes (Recommended)
+```bash
+# Enter development environment
+nix develop
+
+# Or with direnv (auto-loads when entering directory)
+echo "use flake" > .envrc
+direnv allow
+```
+
 ## Notes
 
 - The parse function for each challenge question's input file was designed to handle the `CRLF` end of line sequence.
