@@ -636,6 +636,23 @@ run-submit:
 		fi; \
 	fi
 
+
+# Add flake targets
+.PHONY: flake-build flake-run flake-dev
+
+flake-build:
+	nix build .#day$(DAY)-$(YEAR)
+
+flake-run:
+	nix run .#day$(DAY)-$(YEAR)
+
+flake-dev:
+	nix develop
+
+flake-update:
+	nix flake update
+
+
 # Show help
 help:
 	@echo "Advent of Code OCaml - Makefile Help"
@@ -666,6 +683,13 @@ help:
 	@echo "  make run-submit DAY=XX INPUT=path         : Run day XX and prompt to submit answers"
 	@echo "  make run-submit DAY=XX INPUT=download     : Download input, run day XX, and prompt to submit"
 	@echo ""
+	@echo "Flake Commands (Nix 2.4+):"
+	@echo "  make flake-dev                                 : Enter flake development shell"
+	@echo "  make flake-build DAY=XX YEAR=YYYY             : Build specific day with flakes"
+	@echo "  make flake-run DAY=XX YEAR=YYYY               : Run specific day with flakes"
+	@echo "  nix flake show                                 : Show all available packages"
+	@echo "  nix build .#all-2024                          : Build all 2024 solutions"
+	@echo ""
 	@echo "  help                                      : Show this help message"
 	@echo ""
 	@echo "Examples:"
@@ -673,4 +697,5 @@ help:
 	@echo "  make test-03                                           # Run tests for day03"
 	@echo "  make run-day DAY=02 INPUT=../inputs/2024/day02.txt     # Run day02 with specified input"
 	@echo "  make run-release DAY=01 INPUT=puzzle_input             # Build and run day01 in release mode with default input"
+	@echo "  make run-submit DAY=01 INPUT=download                  # Download input, run day01 in release mode, and prompt to submit"
 	@echo ""
