@@ -62,16 +62,34 @@ test-%:
 # Lint all days (OCaml doesn't have clippy, but we can use ocamlformat)
 lint: fmt-check
 
-# Format all code
+# Format all code with better error handling
 fmt:
 	@echo "Formatting code for all days..."
-	@for day in $(DAYS); do \
+	@failed_dirs=""; \
+	for day in $(DAYS); do \
 		if [ -d "$(YEAR)/$$day" ]; then \
 			echo "Formatting $$day..."; \
-			cd $(YEAR)/$$day && find . -name "*.ml" -o -name "*.mli" | xargs ocamlformat --enable-outside-detected-project --inplace && cd ../..; \
+			cd $(YEAR)/$$day; \
+			ml_files=$$(find . -name "*.ml" -o -name "*.mli"); \
+			if [ -n "$$ml_files" ]; then \
+				if echo "$$ml_files" | xargs ocamlformat --enable-outside-detected-project --inplace; then \
+					echo "✅ $$day formatted successfully"; \
+				else \
+				echo "❌ Failed to format $$day"; \
+					failed_dirs="$$failed_dirs $$day"; \
+				fi; \
+			else \
+				echo "ℹ️  No OCaml files found in $$day"; \
+			fi; \
+			cd ../..; \
 		fi; \
-	done
-	@echo "✅ All code formatted successfully!"
+	done; \
+	if [ -n "$$failed_dirs" ]; then \
+		echo "❌ Formatting failed for:$$failed_dirs"; \
+		exit 1; \
+	else \
+		echo "✅ All code formatted successfully!"; \
+	fi
 
 # Check formatting for all code
 fmt-check:
