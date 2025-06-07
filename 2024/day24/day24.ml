@@ -81,7 +81,8 @@ type gate = {
   output : string;
 }
 
-
+(** String map module for efficient lookups *)
+module StringMap = Map.Make(String)
 
 (** Solves Part 1 by simulating the circuit and calculating the decimal value
     from the binary outputs on z-wires.
@@ -97,10 +98,6 @@ type gate = {
     @return The int64 number produced by the circuit
 *)
 let part1 (wires, gates) =
-  (* Create a string map for evaluations *)
-  let module StringMap = Map.Make(String) in
-  
-  (* Convert wires list to a map *)
   let initial_eval = 
     List.fold_left
       (fun map (name, value) -> StringMap.add name value map)
@@ -108,7 +105,6 @@ let part1 (wires, gates) =
       wires
   in
   
-  (* Recursive function to process gates *)
   let rec run eval gates =
     if gates = [] then
       eval
@@ -147,18 +143,15 @@ let part1 (wires, gates) =
       []
   in
   
-    let z_values =
-      let z_array = Array.of_list z_wires 
-    in
-      Array.sort (fun (k1, _) (k2, _) -> compare k2 k1) z_array;
-      
-      let buffer = Buffer.create 16 
-    in  (* Initial size estimate *)
-      Array.iter (fun (_, v) -> Buffer.add_string buffer (string_of_int v)) z_array;
-      Buffer.contents buffer
-    in
+  let z_values =
+    let z_array = Array.of_list z_wires in
+    Array.sort (fun (k1, _) (k2, _) -> compare k2 k1) z_array;
+    
+    let buffer = Buffer.create 16 in
+    Array.iter (fun (_, v) -> Buffer.add_string buffer (string_of_int v)) z_array;
+    Buffer.contents buffer
+  in
   
-  (* Convert binary string to int64 *)
   let binary_to_int64 s =
     match s with
     | "" -> Int64.zero
@@ -174,6 +167,8 @@ let part1 (wires, gates) =
   in
   
   binary_to_int64 z_values
+
+
     (** Solves Part 2 by identifying the four pairs of gates whose output wires have been swapped.
   
       This function implements a search algorithm to find the four pairs of gates that,
@@ -192,466 +187,217 @@ let part1 (wires, gates) =
       @return Comma-separated string of the eight wire names involved in the swaps, sorted alphabetically
   *)
 let part2 (_wires, gates) =
-  let module StringMap = Map.Make(String) in
-
-  let gate_by_out =
-    List.fold_left (fun acc gate ->
-      StringMap.add gate.output gate acc
-    ) StringMap.empty gates in
-    
-  (* Helper to check if a wire matches a pattern *)
-  let matches_pattern wire pattern =
-    let regex = Str.regexp pattern in
-    Str.string_match regex wire 0
+  let gate_by_out = List.fold_left (fun acc gate ->
+    StringMap.add gate.output gate acc
+  ) StringMap.empty gates in
+  
+  (* Check if there's a loop in the circuit *)
+  let has_loop gate_by_out =
+    let rec dfs out path =
+      if List.mem out path then
+        true
+      else
+        match StringMap.find_opt out gate_by_out with
+        | None -> false
+        | Some gate ->
+            let left, right = gate.input in
+            dfs left (out :: path) || dfs right (out :: path)
+    in
+    StringMap.exists (fun out _ -> dfs out []) gate_by_out
   in
   
-  (* Find the highest z-wire to determine circuit size *)
-  let max_z = 
-    StringMap.fold (fun k _ acc ->
-      if matches_pattern k "z[0-9]+" then
-        let num = int_of_string (String.sub k 1 (String.length k - 1)) in
-        max acc num
-      else acc
-    ) gate_by_out 0
+  (* Collect all wires in the subcircuit for a given output *)
+  let rec collect out gate_by_out =
+    match StringMap.find_opt out gate_by_out with
+    | None -> []
+    | Some gate ->
+        let left, right = gate.input in
+        out :: collect left gate_by_out @ collect right gate_by_out
   in
-  (* Find problematic wires that violate binary adder rules *)
-  let find_violations () =
-    let problems = ref [] in
-    
-    (* Helper to check if a wire feeds into gates of specific operation types *)
-    let feeds_into_operation wire op_type =
-      StringMap.exists (fun _ gate ->
-        gate.operation = op_type &&
-        (fst gate.input = wire || snd gate.input = wire)
-      ) gate_by_out
-    in
-    
-    (* Helper to get what operations a wire feeds into *)
-    let get_feeding_operations wire =
-      StringMap.fold (fun _ gate acc ->
-        if fst gate.input = wire || snd gate.input = wire then
-          gate.operation :: acc
-        else acc
-      ) gate_by_out []
-    in
-    
-    (* Find wires that should be feeding into z-outputs but may be swapped *)
-    let find_misplaced_wires () =
-      let misplaced = ref [] in
-      StringMap.iter (fun out gate ->
-        if matches_pattern out "z[0-9]+" && out <> "z00" && out <> Printf.sprintf "z%02d" max_z then
-          let input1, input2 = gate.input in
-          (* Check if this z-output should be getting different inputs *)
-          if gate.operation <> Xor then
-            (* z-outputs should typically be XOR, so inputs to non-XOR z-outputs are suspect *)
-            (misplaced := input1 :: !misplaced;
-             misplaced := input2 :: !misplaced)
-          else
-            (* For XOR z-outputs, check if inputs have the right structure *)
-            let input1_gate = try Some (StringMap.find input1 gate_by_out) with Not_found -> None in
-            let input2_gate = try Some (StringMap.find input2 gate_by_out) with Not_found -> None in
-            
-            let input1_is_xy_xor = match input1_gate with
-              | Some g -> g.operation = Xor && 
-                         let i1, i2 = g.input in
-                         matches_pattern i1 "[xy][0-9]+" && matches_pattern i2 "[xy][0-9]+"
-              | None -> false
-            in
-            let input2_is_xy_xor = match input2_gate with
-              | Some g -> g.operation = Xor && 
-                         let i1, i2 = g.input in
-                         matches_pattern i1 "[xy][0-9]+" && matches_pattern i2 "[xy][0-9]+"
-              | None -> false
-            in
-            let input1_is_carry = match input1_gate with
-              | Some g -> g.operation = Or
-              | None -> false
-            in
-            let input2_is_carry = match input2_gate with
-              | Some g -> g.operation = Or
-              | None -> false
-            in
-            
-            (* If neither input is a proper xy-XOR or carry, the inputs might be swapped *)
-            if not ((input1_is_xy_xor && input2_is_carry) || (input2_is_xy_xor && input1_is_carry)) then
-              (if not input1_is_xy_xor && not input1_is_carry then
-                 misplaced := input1 :: !misplaced;
-               if not input2_is_xy_xor && not input2_is_carry then
-                 misplaced := input2 :: !misplaced)
-      ) gate_by_out;
-      List.sort_uniq String.compare !misplaced
-    in
-    
-    StringMap.iter (fun out gate ->
-      let input1, input2 = gate.input in
-      let both_xy = (matches_pattern input1 "[xy][0-9]+" && matches_pattern input2 "[xy][0-9]+") in
-      let either_xy = (matches_pattern input1 "[xy][0-9]+" || matches_pattern input2 "[xy][0-9]+") in
-      
-      match gate.operation, out with
-      (* Rule 1: z-wires (except z00 and final carry) should be XOR outputs *)
-      | And, out when matches_pattern out "z[0-9]+" && out <> "z00" && out <> Printf.sprintf "z%02d" max_z ->
-          problems := out :: !problems
-      | Or, out when matches_pattern out "z[0-9]+" && out <> Printf.sprintf "z%02d" max_z ->
-          problems := out :: !problems
-          
-      (* Rule 2: XOR with x,y inputs should go to z-wire (for z00) or feed another XOR *)
-      | Xor, out when both_xy && not (matches_pattern out "z[0-9]+") ->
-          if not (feeds_into_operation out Xor) then
-            problems := out :: !problems
-          
-      (* Rule 3: AND with x,y inputs (except x00,y00) should feed OR gate *)
-      | And, out when both_xy && not (input1 = "x00" || input2 = "x00" || input1 = "y00" || input2 = "y00") ->
-          if not (feeds_into_operation out Or) then
-            problems := out :: !problems
-            
-      (* Rule 4: OR gates should not have x,y inputs directly *)
-      | Or, out when either_xy ->
-          problems := out :: !problems
-          
-      (* Rule 5: AND gates that don't have x,y inputs should come from specific patterns *)
-      | And, out when not either_xy ->
-          (* Should have one input from XOR(x,y) and one from OR (carry) *)
-          let input1_gate = try Some (StringMap.find input1 gate_by_out) with Not_found -> None in
-          let input2_gate = try Some (StringMap.find input2 gate_by_out) with Not_found -> None in
-          
-          let check_input_validity inp gate_opt =
-            match gate_opt with
-            | Some g when g.operation = Xor ->
-                let i1, i2 = g.input in
-                matches_pattern i1 "[xy][0-9]+" && matches_pattern i2 "[xy][0-9]+"
-            | Some g when g.operation = Or -> true
-            | _ -> false
-          in
-          
-          if not (check_input_validity input1 input1_gate || check_input_validity input2 input2_gate) then
-            problems := out :: !problems
-            
-      (* Rule 6: XOR gates feeding z-wires should have proper structure *)
-      | Xor, out when matches_pattern out "z[0-9]+" && not either_xy && out <> "z00" && out <> Printf.sprintf "z%02d" max_z ->
-          let input1_gate = try Some (StringMap.find input1 gate_by_out) with Not_found -> None in
-          let input2_gate = try Some (StringMap.find input2 gate_by_out) with Not_found -> None in
-          
-          let input1_is_xy_xor = match input1_gate with
-            | Some g -> g.operation = Xor && 
-                       let i1, i2 = g.input in
-                       matches_pattern i1 "[xy][0-9]+" && matches_pattern i2 "[xy][0-9]+"
-            | None -> false
-          in
-          let input2_is_xy_xor = match input2_gate with
-            | Some g -> g.operation = Xor && 
-                       let i1, i2 = g.input in
-                       matches_pattern i1 "[xy][0-9]+" && matches_pattern i2 "[xy][0-9]+"
-            | None -> false
-          in
-          let input1_is_carry = match input1_gate with
-            | Some g -> g.operation = Or
-            | None -> false
-          in
-          let input2_is_carry = match input2_gate with
-            | Some g -> g.operation = Or
-            | None -> false
-          in
-          
-          if not ((input1_is_xy_xor && input2_is_carry) || (input2_is_xy_xor && input1_is_carry)) then
-            problems := out :: !problems
-            
-      | _ -> ()    ) gate_by_out;
-      (* Include misplaced wires in the problems *)
-    let misplaced_wires = find_misplaced_wires () in
-    problems := misplaced_wires @ !problems;
-    
-    (* Add additional heuristic detection for missing wires *)
-    StringMap.iter (fun out gate ->
-      let input1, input2 = gate.input in
-      
-      (* Look for specific patterns that might indicate swapped wires *)
-      match gate.operation with
-      | Xor ->
-          (* XOR gates that feed into AND gates might be swapped *)
-          let feeds_into_and = StringMap.exists (fun _ next_gate ->
-            next_gate.operation = And &&
-            (fst next_gate.input = out || snd next_gate.input = out)
-          ) gate_by_out in
-          
-          let feeds_into_or = StringMap.exists (fun _ next_gate ->
-            next_gate.operation = Or &&
-            (fst next_gate.input = out || snd next_gate.input = out)
-          ) gate_by_out in
-          
-          (* If XOR feeds into AND but not OR, and doesn't have xy inputs, it might be swapped *)
-          if feeds_into_and && not feeds_into_or && 
-             not (matches_pattern input1 "[xy][0-9]+") && 
-             not (matches_pattern input2 "[xy][0-9]+") &&
-             not (matches_pattern out "z[0-9]+") then
-            problems := out :: !problems
-            
-      | And ->
-          (* AND gates that should feed into z-outputs via XOR *)
-          let feeds_into_z_xor = StringMap.exists (fun z_out z_gate ->
-            matches_pattern z_out "z[0-9]+" && z_gate.operation = Xor &&
-            (fst z_gate.input = out || snd z_gate.input = out)
-          ) gate_by_out in
-          
-          (* If AND doesn't feed into OR but should, it might be swapped *)
-          if not (feeds_into_operation out Or) && not feeds_into_z_xor &&
-             not (matches_pattern input1 "[xy][0-9]+") &&
-             not (matches_pattern input2 "[xy][0-9]+") then
-            problems := out :: !problems
-            
-      | Or ->
-          (* OR gates should feed into XOR for z-outputs *)
-          let feeds_into_z_xor = StringMap.exists (fun z_out z_gate ->
-            matches_pattern z_out "z[0-9]+" && z_gate.operation = Xor &&
-            (fst z_gate.input = out || snd z_gate.input = out)
-          ) gate_by_out in
-          
-          (* If OR doesn't feed into a z-XOR, it might be swapped *)
-          if not feeds_into_z_xor then
-            problems := out :: !problems
-    ) gate_by_out;
-    
-    List.sort_uniq String.compare !problems
+  
+  (* Build canonical string representation of circuit *)
+  let rec make out gate_by_out =
+    match StringMap.find_opt out gate_by_out with
+    | None -> out
+    | Some gate ->
+        let left = make (fst gate.input) gate_by_out in
+        let right = make (snd gate.input) gate_by_out in
+        let left, right = if left <= right then left, right else right, left in
+        match gate.operation with
+        | And -> "(" ^ left ^ ")and(" ^ right ^ ")"
+        | Or -> "(" ^ left ^ ")or(" ^ right ^ ")"
+        | Xor -> "(" ^ left ^ ")xor(" ^ right ^ ")"
   in
-  let violations = find_violations () in
-  Printf.printf "Debug: All violations found: [%s]\n" (String.concat "; " violations);
-    (* Filter violations to focus on the most likely swapped wires *)
-  let filtered_violations = 
-    let non_z_violations = List.filter (fun wire -> not (matches_pattern wire "z[0-9]+")) violations in
-    let z_violations = List.filter (fun wire -> matches_pattern wire "z[0-9]+") violations in
+  
+  (* Validate if a z-wire circuit matches expected binary adder pattern *)
+  let valid out gate_by_out =
+    let circuit = make out gate_by_out in
     
-    Printf.printf "Debug: Non-z violations: [%s]\n" (String.concat "; " non_z_violations);
-    Printf.printf "Debug: Z violations: [%s]\n" (String.concat "; " z_violations);
-    
-    (* Filter out x,y wires from non-z violations as they're input wires, not output wires that can be swapped *)
-    let filtered_non_z = List.filter (fun wire -> 
-      not (matches_pattern wire "[xy][0-9]+")
-    ) non_z_violations in
-    
-    Printf.printf "Debug: Filtered non-z violations: [%s]\n" (String.concat "; " filtered_non_z);
-    
-    (* Take a strategic selection: prioritize intermediate wires but ensure we get key z-wires *)
-    let rec take n lst =
-      match n, lst with
-      | 0, _ | _, [] -> []
-      | n, x :: xs -> x :: take (n - 1) xs
-    in
-    
-    (* Be more selective about z-wires - exclude z01 and z15 which seem less critical *)
-    let critical_z_violations = List.filter (fun wire ->
-      not (wire = "z01" || wire = "z15" || wire = "z38")
-    ) z_violations in
-    
-    Printf.printf "Debug: Critical z violations: [%s]\n" (String.concat "; " critical_z_violations);    (* Look for specific missing wires including mdd and wpd *)
-    let find_missing_wires () =
-      let candidates = ref [] in
-      StringMap.iter (fun out gate ->
-        (* Strategy 1: Look for wires that feed into the correct z-wires that we know are good *)
-        let feeds_into_correct_z = StringMap.exists (fun z_out z_gate ->
-          (z_out = "z11" || z_out = "z19" || z_out = "z37") &&
-          z_gate.operation = Xor &&
-          (fst z_gate.input = out || snd z_gate.input = out)
-        ) gate_by_out in
-        
-        (* Strategy 2: Look for intermediate wires that should connect to carries *)
-        let input1, input2 = gate.input in
-        
-        (* Look for OR gates that should feed z-outputs *)
-        if gate.operation = Or && feeds_into_correct_z then
-          candidates := out :: !candidates
-          
-        (* Look for AND gates that produce carries but don't feed OR properly *)
-        else if gate.operation = And && not (matches_pattern input1 "[xy][0-9]+") then
-          (* This should feed an OR gate *)
-          let feeds_or = StringMap.exists (fun _ next_gate ->
-            next_gate.operation = Or &&
-            (fst next_gate.input = out || snd next_gate.input = out)
-          ) gate_by_out in
-          if not feeds_or then
-            candidates := out :: !candidates
-              (* Look for XOR gates that should feed z-outputs but don't *)
-        else if gate.operation = Xor && not (matches_pattern out "z[0-9]+") then
-          if (matches_pattern input1 "[xy][0-9]+" && matches_pattern input2 "[xy][0-9]+") then
-            (* xy-XOR should either go to z-output or feed another XOR *)
-            let feeds_z = StringMap.exists (fun z_out z_gate ->
-              matches_pattern z_out "z[0-9]+" && z_gate.operation = Xor &&
-              (fst z_gate.input = out || snd z_gate.input = out)
-            ) gate_by_out in
-            let feeds_xor = StringMap.exists (fun _ next_gate ->
-              next_gate.operation = Xor && not (matches_pattern next_gate.output "z[0-9]+") &&
-              (fst next_gate.input = out || snd next_gate.input = out)
-            ) gate_by_out in
-            if not feeds_z && not feeds_xor then
-              candidates := out :: !candidates;
-              
-        (* Strategy 3: Look for wires with names similar to mdd, wpd pattern *)
-        if String.length out = 3 && not (matches_pattern out "[xyz][0-9]+") then
-          (* Three-letter wires that might be intermediate carries or sums *)
-          let has_suspicious_feeding = 
-            (* Check if it feeds into unexpected places *)
-            let feeding_count = StringMap.fold (fun _ next_gate acc ->
-              if fst next_gate.input = out || snd next_gate.input = out then acc + 1 else acc
-            ) gate_by_out 0 in
-            feeding_count = 0 || feeding_count > 2  (* Too few or too many connections *)
-          in
-          if has_suspicious_feeding then
-            candidates := out :: !candidates
-      ) gate_by_out;
-      List.sort_uniq String.compare !candidates
-    in
-    
-    let missing_candidates = find_missing_wires () in
-    Printf.printf "Debug: Missing wire candidates: [%s]\n" (String.concat "; " missing_candidates);
-      (* Prioritize specific wires we know should be included *)
-    let priority_intermediate = List.filter (fun wire ->
-      (* These are the wires we know should be in the answer *)
-      wire = "jqf" || wire = "skh" || wire = "wts" ||
-      (* Look for 3-letter intermediate wires that aren't x,y,z *)
-      (String.length wire = 3 && not (matches_pattern wire "[xyz][0-9]+") &&
-       List.mem wire missing_candidates)
-    ) (List.sort_uniq String.compare (filtered_non_z @ missing_candidates)) in
-    
-    (* Remove known bad candidates *)
-    let clean_priority = List.filter (fun wire ->
-      not (wire = "gkc" || wire = "hjp" || wire = "jgw" || wire = "qqw" || 
-           wire = "rhh" || wire = "smt" || wire = "wfc" || wire = "cmp" || wire = "wpp")
-    ) priority_intermediate in
-    
-    Printf.printf "Debug: Clean priority intermediate: [%s]\n" (String.concat "; " clean_priority);
-    
-    (* If we still need more, look for additional specific patterns *)
-    let find_remaining_candidates () =
-      let remaining = ref [] in
-      StringMap.iter (fun out gate ->
-        if not (List.mem out clean_priority) && not (matches_pattern out "[xyz][0-9]+") &&
-           String.length out = 3 then
-          (* Look for wires that feed into our known good z-wires *)
-          let feeds_good_z = StringMap.exists (fun z_out z_gate ->
-            (z_out = "z11" || z_out = "z19" || z_out = "z37") &&
-            (fst z_gate.input = out || snd z_gate.input = out)
-          ) gate_by_out in
-          
-          (* Or look for wires that should feed these good z-wires *)
-          if feeds_good_z then
-            remaining := out :: !remaining
-          (* Also check for pattern: 3-letter names that look like mdd, wpd *)
-          else if String.contains out 'd' && not (matches_pattern out "[xyz][0-9]+") then
-            remaining := out :: !remaining
-      ) gate_by_out;
-      List.sort_uniq String.compare !remaining
-    in
-    
-    let remaining_candidates = find_remaining_candidates () in
-    Printf.printf "Debug: Remaining candidates: [%s]\n" (String.concat "; " remaining_candidates);
-      let all_intermediate_candidates = List.sort_uniq String.compare (clean_priority @ remaining_candidates) in
-    
-    (* Prioritize based on specific patterns that indicate correct swapped wires *)
-    let score_candidate wire =
-      let score = ref 0 in
-      
-      (* Higher priority for wires already in clean_priority (jqf, skh, wts) *)
-      if List.mem wire clean_priority then score := !score + 100;
-      
-      (* Higher priority for 3-letter wires ending in 'd' (like mdd, wpd) *)
-      if String.length wire = 3 && String.get wire 2 = 'd' then score := !score + 50;
-      
-      (* Higher priority for wires that feed into our known good z-wires *)
-      let feeds_good_z = StringMap.exists (fun z_out z_gate ->
-        (z_out = "z11" || z_out = "z19" || z_out = "z37") &&
-        (fst z_gate.input = wire || snd z_gate.input = wire)
-      ) gate_by_out in
-      if feeds_good_z then score := !score + 30;
-      
-      (* Lower priority for longer names or names starting with certain patterns *)
-      if String.length wire > 3 then score := !score - 10;
-      if String.get wire 0 = 'q' then score := !score - 20; (* Avoid qqw pattern *)
-      if String.get wire 0 = 'g' then score := !score - 15; (* Avoid gkc pattern *)
-      
-      (!score, wire)
-    in
-      let scored_candidates = List.map score_candidate all_intermediate_candidates in
-    let sorted_candidates = List.sort (fun (s1,_) (s2,_) -> compare s2 s1) scored_candidates in
-    let final_intermediate = 
-      let rec take n lst =
-        match n, lst with
-        | 0, _ | _, [] -> []
-        | n, (_, x) :: xs -> x :: take (n - 1) xs
+    (* Extract XY matches *)
+    let extract_xy_matches circuit =
+      let regex = Str.regexp "[xy][0-9]+" in
+      let rec find_all pos acc =
+        try
+          let _ = Str.search_forward regex circuit pos in
+          let matched = Str.matched_string circuit in
+          find_all (Str.match_end ()) (matched :: acc)
+        with Not_found -> List.rev acc
       in
-      take 5 sorted_candidates
+      find_all 0 []
     in
-    Printf.printf "Debug: Final intermediate: [%s]\n" (String.concat "; " final_intermediate);
-    Printf.printf "Debug: Taking %d intermediate, %d z-wires\n" (List.length final_intermediate) (List.length critical_z_violations);
     
-    final_intermediate @ critical_z_violations
-  in
-    (* If we still don't have exactly 8, look for additional candidates *)
-  let final_wires = 
-    if List.length filtered_violations < 8 then
-      (* Find wires that feed into problematic z-outputs *)
-      let additional_candidates = ref [] in
-        (* Look for specific patterns that might be swapped *)
-      StringMap.iter (fun out gate ->
-        (* Look for intermediate wires that might be feeding into wrong places *)
-        let input1, input2 = gate.input in
-        
-        (* Check if this wire feeds into a z-output that should have different structure *)
-        if matches_pattern out "z[0-9]+" && not (List.mem out filtered_violations) then
-          (if not (matches_pattern input1 "[xy][0-9]+") && not (List.mem input1 filtered_violations) then
-             additional_candidates := input1 :: !additional_candidates;
-           if not (matches_pattern input2 "[xy][0-9]+") && not (List.mem input2 filtered_violations) then
-             additional_candidates := input2 :: !additional_candidates)
-             
-        (* Also look for intermediate gates that should be connected differently *)
-        else if not (matches_pattern out "[xyz][0-9]+") && not (List.mem out filtered_violations) then
-          (* Check if this intermediate wire has suspicious feeding patterns *)
-          let feeding_ops = 
-            StringMap.fold (fun _ next_gate acc ->
-              if fst next_gate.input = out || snd next_gate.input = out then
-                next_gate.operation :: acc
-              else acc
-            ) gate_by_out []
-          in
-          
-          (* If an intermediate wire feeds into unexpected operations, it might be swapped *)
-          match gate.operation, feeding_ops with
-          | Xor, [] -> additional_candidates := out :: !additional_candidates  (* XOR not feeding anywhere *)
-          | And, ops when not (List.mem Or ops) -> additional_candidates := out :: !additional_candidates  (* AND not feeding OR *)
-          | Or, ops when List.mem Or ops -> additional_candidates := out :: !additional_candidates  (* OR feeding another OR *)
-          | _ -> ()
-          
-        (* Look for wires that feed into problematic z-outputs but aren't flagged themselves *)
-        else if not (matches_pattern out "[xyz][0-9]+") && not (List.mem out filtered_violations) then
-          (* Check if this feeds into any of our problem z-wires *)
-          let feeds_into_problem_z = 
-            StringMap.exists (fun z_out z_gate ->
-              matches_pattern z_out "z[0-9]+" && List.mem z_out filtered_violations &&
-              (fst z_gate.input = out || snd z_gate.input = out)
-            ) gate_by_out
-          in
-          if feeds_into_problem_z then
-            additional_candidates := out :: !additional_candidates
-      ) gate_by_out;
-      
-      Printf.printf "Debug: Additional candidates: [%s]\n" (String.concat "; " (List.sort_uniq String.compare !additional_candidates));
-      
-      let rec take n lst =
-        match n, lst with
-        | 0, _ | _, [] -> []
-        | n, x :: xs -> x :: take (n - 1) xs
+    (* Extract operation matches *)
+    let extract_operation_matches circuit =
+      let regex = Str.regexp "\\(and\\|or\\|xor\\)" in
+      let rec find_all pos acc =
+        try
+          let _ = Str.search_forward regex circuit pos in
+          let op = Str.matched_string circuit in
+          find_all (Str.match_end ()) (op :: acc)
+        with Not_found -> List.rev acc
       in
-      
-      let needed = 8 - List.length filtered_violations in
-      let unique_additional = List.sort_uniq String.compare !additional_candidates in
-      filtered_violations @ (take needed unique_additional)
+      find_all 0 []
+    in
+    
+    (* chunkBySize implementation *)
+    let chunk_by_size size lst =
+      let rec chunk acc current count = function
+        | [] -> if current = [] then List.rev acc else List.rev (List.rev current :: acc)
+        | x :: xs ->
+            if count = size then
+              chunk (List.rev current :: acc) [x] 1 xs
+            else
+              chunk acc (x :: current) (count + 1) xs
+      in
+      chunk [] [] 0 lst
+    in
+    
+    (* validXY function *)
+    let valid_xy =
+      let xy_matches = extract_xy_matches circuit in
+      let xy_chunks = chunk_by_size 2 xy_matches in
+      match xy_chunks with
+      | [] -> true
+      | ["x00"; "y00"] :: t ->
+          (* After chunking by 2, we get pairs, then chunk those pairs by 2 again *)
+          let t_rechunked = chunk_by_size 2 t in
+          let n = List.length t_rechunked in
+          let rec validate_sequence i =
+            if i > n then true
+            else if i < n then
+              (* Let xy = [| $"x%02d{i}"; $"y%02d{i}" |] *)
+              let expected_pair = [Printf.sprintf "x%02d" i; Printf.sprintf "y%02d" i] in
+              (* t[i - 1] = List.replicate 2 xy means the chunk should be [xy; xy] *)
+              let expected_chunk = [expected_pair; expected_pair] in
+              (if i > 0 && i <= List.length t_rechunked then
+                let chunk = List.nth t_rechunked (i - 1) in
+                chunk = expected_chunk
+              else false) && validate_sequence (i + 1)
+            else if i = n then
+              (* Last element: t[i - 1] = [ xy ] *)
+              let expected_pair = [Printf.sprintf "x%02d" i; Printf.sprintf "y%02d" i] in
+              let expected_chunk = [expected_pair] in
+              (if i > 0 && i <= List.length t_rechunked then
+                let chunk = List.nth t_rechunked (i - 1) in
+                chunk = expected_chunk
+              else false)
+            else true
+          in
+          validate_sequence 1
+      | _ -> false
+    in
+    
+    (* validOperation function *)
+    let valid_operations =
+      let ops = extract_operation_matches circuit in
+      match ops with
+      | [] -> true
+      | ["xor"] -> true  (* i = 0 case *)
+      | "and" :: t ->
+          let t_chunks = chunk_by_size 4 t in
+          let n = List.length t_chunks in
+          let rec validate_chunks i =
+            if i >= n then true
+            else
+              let chunk = List.nth t_chunks i in
+              if i + 1 < n then
+                chunk = ["and"; "xor"; "or"; "and"] && validate_chunks (i + 1)
+              else
+                chunk = ["xor"; "xor"] && validate_chunks (i + 1)
+          in
+          validate_chunks 0
+      | _ -> false
+    in
+    
+    valid_xy && valid_operations
+  in
+  
+  (* Main search function that finds the correct gate mapping *)
+  let rec search i gate_by_out =
+    if i >= 45 then
+      Some gate_by_out
     else
-      let rec take n lst =
-        match n, lst with
-        | 0, _ | _, [] -> []
-        | n, x :: xs -> x :: take (n - 1) xs
-      in
-      take 8 filtered_violations
+      let out = Printf.sprintf "z%02d" i in
+      if valid out gate_by_out then
+        search (i + 1) gate_by_out
+      else
+        let swaps = collect out gate_by_out in
+        let rec try_pick_swaps = function
+          | [] -> None
+          | swap_out :: rest_swaps ->
+              let gate_bindings = StringMap.bindings gate_by_out in
+              let rec try_pick_targets = function
+                | [] -> try_pick_swaps rest_swaps
+                | (target_out, target_gate) :: rest_targets ->
+                    if target_out = swap_out then
+                      try_pick_targets rest_targets
+                    else
+                      let current_gate = StringMap.find swap_out gate_by_out in
+                      let new_gate_by_out = 
+                        gate_by_out 
+                        |> StringMap.add swap_out target_gate 
+                        |> StringMap.add target_out current_gate 
+                      in
+                      if has_loop new_gate_by_out then
+                        try_pick_targets rest_targets
+                      else
+                        let rec find_next_invalid j =
+                          if j > 45 then 46  (* No invalid found *)
+                          else if not (valid (Printf.sprintf "z%02d" j) new_gate_by_out) then j
+                          else find_next_invalid (j + 1)
+                        in
+                        let next_invalid = find_next_invalid 0 in
+                        if i < next_invalid then
+                          search next_invalid new_gate_by_out
+                        else
+                          try_pick_targets rest_targets
+              in
+              try_pick_targets gate_bindings
+        in
+        try_pick_swaps swaps
   in
   
-  String.concat "," (List.sort String.compare final_wires)
+  (* Find the correct gate mapping *)
+  let correct_gate_by_out = match search 0 gate_by_out with
+    | Some result -> result
+    | None -> failwith "No solution found"
+  in
+  
+  (* Find the differences between original and corrected mappings *)
+  let diff_wires = 
+    StringMap.fold (fun out original_gate acc ->
+      let corrected_gate = StringMap.find out correct_gate_by_out in
+      if original_gate <> corrected_gate then
+        out :: acc
+      else
+        acc
+    ) gate_by_out []
+    |> List.sort String.compare
+  in
+  
+  Printf.printf "Found %d differing wires: %s\n%!" (List.length diff_wires) (String.concat "," diff_wires);
+  print_newline ();
+  String.concat "," diff_wires
 
 (** Parses the input text into initial wire values and a collection of gates.
 
@@ -702,4 +448,3 @@ let parse input =
   ) gate_lines in
 
   wires, gates
-;;
