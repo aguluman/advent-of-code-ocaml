@@ -3,30 +3,35 @@ open Day11
 
 let example_input = "125 17"
 
-let make_part1_test name expected_output input = 
-  name >:: (fun _ -> 
-    let stones = parse input in 
-    assert_equal expected_output (part1 stones) ~printer:string_of_int)
+let make_part1_test name expected_output input =
+  name >:: fun _ ->
+  assert_equal expected_output (part1 input) ~printer:string_of_int
 
-let part1_test = [
-  make_part1_test "part1 test" 55312 example_input
-]
+let make_part2_test name expected_output input =
+  name >:: fun _ ->
+  assert_equal expected_output (part2 input) ~printer:Int64.to_string
 
-let suite = "Day11 Test Suite" >::: [
-  "part1 tests" >::: part1_test;
-]
+let part1_tests = [ make_part1_test "part1 test" 55312 example_input ]
+let part2_tests = [ make_part2_test "part2 test" 65601038650482L example_input ]
+
+let suite =
+  "Day11 Test Suite"
+  >::: [ "Part 1 Tests" >::: part1_tests; "Part 2 Tests" >::: part2_tests ]
 
 let () = run_test_tt_main suite
 
-(** Main program entry point *)
+(** Main entry point - reads input, runs both function parts and prints results
+    with timing *)
 let () =
-  let input_string = read_line () in
-  let initial_stones = parse input_string in
-  
-  let execution_start = Unix.gettimeofday () in 
+  try
+    let input = read_line () in
+    let timer_start = Unix.gettimeofday () in
 
-  initial_stones |> part1 |> Printf.printf "Part 1: %d\n";
-  initial_stones |> part2 |> Printf.printf "Part 2: %Ld\n";
+    input |> part1 |> Printf.printf "Part 1: %d\n%!";
+    input |> part2 |> Printf.printf "Part 2: %Ld\n%!";
 
-  Unix.gettimeofday () -. execution_start
-  |> Printf.printf "Elapsed time: %.4f seconds\n"
+    Unix.gettimeofday () -. timer_start
+    |> Printf.printf "Elapsed time: %.4f seconds\n%!"
+  with
+  | Failure msg -> Printf.printf "Error: %s\n%!" msg
+  | e -> Printf.printf "Unexpected error: %s\n%!" (Printexc.to_string e)
