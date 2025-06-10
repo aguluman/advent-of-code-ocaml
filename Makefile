@@ -59,48 +59,36 @@ test-%:
 	@echo "Testing day $*..."
 	@cd $(YEAR)/day$* && dune test && echo "✅ All tests passed for day $*!" || echo "❌ Tests failed for day $*!"
 
-# Lint all days (OCaml doesn't have clippy, but we can use ocamlformat)
-lint: fmt-check
 
-# Format all code with better error handling
+# Format all code using dune fmt
 fmt:
-	@echo "Formatting code for all days..."
-	@failed_dirs=""; \
-	for day in $(DAYS); do \
-		if [ -d "$(YEAR)/$$day" ]; then \
-			echo "Formatting $$day..."; \
-			cd $(YEAR)/$$day; \
-			ml_files=$$(find . -name "*.ml" -o -name "*.mli"); \
-			if [ -n "$$ml_files" ]; then \
-				if echo "$$ml_files" | xargs ocamlformat --enable-outside-detected-project --inplace; then \
-					echo "✅ $$day formatted successfully"; \
-				else \
-				echo "❌ Failed to format $$day"; \
-					failed_dirs="$$failed_dirs $$day"; \
-				fi; \
-			else \
-				echo "ℹ️  No OCaml files found in $$day"; \
-			fi; \
-			cd ../..; \
-		fi; \
-	done; \
-	if [ -n "$$failed_dirs" ]; then \
-		echo "❌ Formatting failed for:$$failed_dirs"; \
-		exit 1; \
-	else \
-		echo "✅ All code formatted successfully!"; \
-	fi
+	@echo "Formatting all days..."
+	@for day in $(DAYS); do \
+		echo "Formatting $$day..."; \
+		cd $$day && dune fmt && cd ../..; \
+	done
+	@echo "✅ All days formatted successfully!"
+
+# Format a specific day
+fmt-%:
+	@echo "Formatting day $*..."
+	@cd $(YEAR)/day$* && dune fmt
+	@echo "✅ Day $* formatted successfully!"
 
 # Check formatting for all code
 fmt-check:
 	@echo "Checking formatting for all days..."
 	@for day in $(DAYS); do \
-		if [ -d "$(YEAR)/$$day" ]; then \
-			echo "Checking formatting for $$day..."; \
-			cd $(YEAR)/$$day && find . -name "*.ml" -o -name "*.mli" | xargs ocamlformat --enable-outside-detected-project --check && cd ../..; \
-		fi; \
+		echo "Checking formatting for $$day..."; \
+		cd $$day && dune fmt --diff-command diff && cd ../..; \
 	done
-	@echo "✅ All code formatting is correct!"
+	@echo "✅ All formatting checks completed!"
+
+# Check formatting for a specific day
+fmt-check-%:
+	@echo "Checking formatting for day $*..."
+	@cd $(YEAR)/day$* && dune fmt --diff-command diff
+	@echo "✅ Formatting check completed for day $*!" 
 
 # Run code checks
 check:
