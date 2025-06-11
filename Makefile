@@ -1,7 +1,7 @@
-.PHONY: all build test release lint clean setup new-day run-day help benchmark benchmark-% fmt check run-release run-current download check-status submit run-submit
+.PHONY: all build test release clean setup new-day run-day help benchmark benchmark-% fmt check run-release run-current download check-status submit run-submit
 
 # Default target
-all: test lint
+all: test
 
 # Variables
 YEAR := $(shell if ls -d [0-9][0-9][0-9][0-9] >/dev/null 2>&1; then \
@@ -90,14 +90,6 @@ fmt-check-%:
 	@cd $(YEAR)/day$* && dune fmt --diff-command diff
 	@echo "✅ Formatting check completed for day $*!" 
 
-# Run code checks
-check:
-	@echo "Running dune build for all days..."
-	@for day in $(DAYS); do \
-		echo "Checking $$day..."; \
-		cd $$day && dune build && cd ../..; \
-	done
-	@echo "✅ All code checks passed!"
 
 # Run benchmarks for all days using hyperfine
 benchmark:
@@ -670,10 +662,8 @@ help:
 	@echo "  release         : Build all days in release mode"
 	@echo "  test            : Run tests for all days"
 	@echo "  test-XX         : Run tests for a specific day (e.g., test-01)"
-	@echo "  lint            : Run formatting check"
 	@echo "  fmt             : Format all code"
 	@echo "  fmt-check       : Check formatting for all code"
-	@echo "  check           : Run dune build for all days"
 	@echo "  benchmark       : Run benchmarks for all days (if available)"
 	@echo "  benchmark-XX    : Run benchmark for a specific day (e.g., benchmark-09)"
 	@echo "  clean           : Clean all build artifacts"
@@ -702,6 +692,7 @@ help:
 	@echo "  make build-01                                          # Build day01"
 	@echo "  make test-03                                           # Run tests for day03"
 	@echo "  make run-day DAY=02 INPUT=../inputs/2024/day02.txt     # Run day02 with specified input"
+	@echo "  make run-current DAY=02 INPUT=download     # Run day02 with specified input"
 	@echo "  make run-release DAY=01 INPUT=puzzle_input             # Build and run day01 in release mode with default input"
 	@echo "  make run-submit DAY=01 INPUT=download                  # Download input, run day01 in release mode, and prompt to submit"
 	@echo ""
