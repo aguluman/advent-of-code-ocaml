@@ -268,11 +268,33 @@ run-day:
 		exit 1; \
 	fi; \
 	echo "Running day$(DAY) with input $$INPUT_PATH..."; \
-	cd $(YEAR)/day$(DAY) && \
-	case "$$INPUT_PATH" in \
-		/*) cat $$INPUT_PATH | dune exec ./test.exe ;; \
-		*) cat $(PWD)/$$INPUT_PATH | dune exec ./test.exe ;; \
-	esac
+	\
+	# Create answers directory \
+	mkdir -p answers/$(YEAR); \
+	ANSWER_FILE="answers/$(YEAR)/submit_day$(DAY).txt"; \
+	\
+	# Run the solution and capture output \
+	if OUTPUT=$$(cd $(YEAR)/day$(DAY) && case "$$INPUT_PATH" in /*) cat $$INPUT_PATH | dune exec ./test.exe;; *) cat $(PWD)/$$INPUT_PATH | dune exec ./test.exe;; esac 2>&1); then \
+		echo "$$OUTPUT"; \
+		\
+		# Extract the answers \
+		PART1=$$(echo "$$OUTPUT" | grep "Part 1:" | cut -d':' -f2 | tr -d ' '); \
+		PART2=$$(echo "$$OUTPUT" | grep "Part 2:" | cut -d':' -f2 | tr -d ' '); \
+		\
+		# Save answers if found \
+		if [ ! -z "$$PART1" ] || [ ! -z "$$PART2" ]; then \
+			if [ ! -z "$$PART1" ]; then \
+				echo "Part1: $$PART1" > "$$ANSWER_FILE"; \
+			fi; \
+			if [ ! -z "$$PART2" ]; then \
+				echo "Part2: $$PART2" >> "$$ANSWER_FILE"; \
+			fi; \
+			echo "Answers saved to $$ANSWER_FILE"; \
+		fi; \
+	else \
+		echo "$$OUTPUT"; \
+		echo "Solution failed to run properly"; \
+	fi
 
 # Run a specific day with input file in release mode
 run-release:
@@ -322,11 +344,34 @@ run-release:
 		exit 1; \
 	fi; \
 	echo "Building and running day$(DAY) in release mode with input $$INPUT_PATH..."; \
-	cd $(YEAR)/day$(DAY) && dune build --profile release && \
-	case "$$INPUT_PATH" in \
-		/*) cat "$$INPUT_PATH" | dune exec --profile release ./test.exe ;; \
-		*) cat "$(PWD)/$$INPUT_PATH" | dune exec --profile release ./test.exe ;; \
-	esac
+	cd $(YEAR)/day$(DAY) && dune build --profile release && cd ../../; \
+	\
+	# Create answers directory \
+	mkdir -p answers/$(YEAR); \
+	ANSWER_FILE="answers/$(YEAR)/submit_day$(DAY).txt"; \
+	\
+	# Run the solution and capture output \
+	if OUTPUT=$$(cd $(YEAR)/day$(DAY) && case "$$INPUT_PATH" in /*) cat "$$INPUT_PATH" | dune exec --profile release ./test.exe;; *) cat "$(PWD)/$$INPUT_PATH" | dune exec --profile release ./test.exe;; esac 2>&1); then \
+		echo "$$OUTPUT"; \
+		\
+		# Extract the answers \
+		PART1=$$(echo "$$OUTPUT" | grep "Part 1:" | cut -d':' -f2 | tr -d ' '); \
+		PART2=$$(echo "$$OUTPUT" | grep "Part 2:" | cut -d':' -f2 | tr -d ' '); \
+		\
+		# Save answers if found \
+		if [ ! -z "$$PART1" ] || [ ! -z "$$PART2" ]; then \
+			if [ ! -z "$$PART1" ]; then \
+				echo "Part1: $$PART1" > "$$ANSWER_FILE"; \
+			fi; \
+			if [ ! -z "$$PART2" ]; then \
+				echo "Part2: $$PART2" >> "$$ANSWER_FILE"; \
+			fi; \
+			echo "Answers saved to $$ANSWER_FILE"; \
+		fi; \
+	else \
+		echo "$$OUTPUT"; \
+		echo "Solution failed to run properly"; \
+	fi
 
 # Run the current day (most recent) with input file
 run-current:
@@ -440,47 +485,110 @@ submit:
 		echo "Please specify a part with PART=1 or PART=2"; \
 		exit 1; \
 	fi; \
-	ANSWER_FILE="answers/$(YEAR)/submit_day$(DAY).txt"; \
-	if [ ! -f "$$ANSWER_FILE" ]; then \
-		echo "No answers file found at $$ANSWER_FILE"; \
-		exit 1; \
-	fi; \
-	ANSWER=$$(grep "^Part$(PART):" "$$ANSWER_FILE" | cut -d':' -f2 | sed 's/\[Status:.*\]//g' | tr -d ' ' | head -n1); \
-	if [ -z "$$ANSWER" ]; then \
-		echo "No answer found for Part $(PART)!"; \
-		exit 1; \
-	fi; \
-	echo "Found answer for Day $(DAY) Part $(PART): $$ANSWER"; \
-	SESSION_TOKEN=$$(grep AUTH_TOKEN .env | cut -d'=' -f2); \
+	\
+	# First check if the part is already completed online \
+	echo "Checking submission status for day $(DAY)..."; \
+	SESSION_TOKEN=$$(grep AUTH_TOKEN .env 2>/dev/null | cut -d'=' -f2); \
 	if [ -z "$$SESSION_TOKEN" ]; then \
 		echo "No session token found in .env file!"; \
 		exit 1; \
 	fi; \
-	if [ "$(PART)" = "2" ]; then \
-		if grep -q "Part1:.*\[Status: Correct\]" "$$ANSWER_FILE"; then \
-			echo "Found Part 1 marked as correct in answer file. Proceeding with Part 2 submission."; \
-		else \
-			echo "Checking Part 1 status..."; \
-			DAY_NUM=$$(echo $(DAY) | sed 's/^0*//'); \
-			RESPONSE=$$(curl -s --cookie "session=$$SESSION_TOKEN" \
-				-H "User-Agent: github.com/advent-of-code-ocaml" \
-				"https://adventofcode.com/$(YEAR)/day/$$DAY_NUM"); \
-			if echo "$$RESPONSE" | grep -q "one gold star: \*\|You have completed Part One"; then \
-				echo "Part 1 is completed. Proceeding with Part 2 submission."; \
-			else \
-				echo "You need to complete Part 1 before submitting Part 2."; \
-				exit 1; \
+	DAY_NUM=$$(echo $(DAY) | sed 's/^0*//'); \
+	RESPONSE=$$(curl -s --cookie "session=$$SESSION_TOKEN" \
+		-H "User-Agent: github.com/advent-of-code-ocaml" \
+		"https://adventofcode.com/$(YEAR)/day/$$DAY_NUM"); \
+	\
+	# Check if part is already completed \
+	if [ "$(PART)" = "1" ]; then \
+		if echo "$$RESPONSE" | grep -q "Both parts of this puzzle are complete!\|one gold star: \*\|You have completed Part One"; then \
+			echo "Part 1 is already completed! ✓"; \
+			if [ "$${FORCE:-}" != "1" ]; then \
+				echo "Use FORCE=1 to submit anyway."; \
+				exit 0; \
 			fi; \
 		fi; \
+	elif [ "$(PART)" = "2" ]; then \
+		if echo "$$RESPONSE" | grep -q "Both parts of this puzzle are complete!"; then \
+			echo "Part 2 is already completed! ✓"; \
+			if [ "$${FORCE:-}" != "1" ]; then \
+				echo "Use FORCE=1 to submit anyway."; \
+				exit 0; \
+			fi; \
+		elif ! echo "$$RESPONSE" | grep -q "one gold star: \*\|You have completed Part One"; then \
+			echo "You need to complete Part 1 before submitting Part 2."; \
+			exit 1; \
+		fi; \
 	fi; \
+	\
+	ANSWER_FILE="answers/$(YEAR)/submit_day$(DAY).txt"; \
+	if [ ! -f "$$ANSWER_FILE" ]; then \
+		echo "No answers file found at $$ANSWER_FILE"; \
+		echo "Running solution to generate answers..."; \
+		if [ ! -f "inputs/$(YEAR)/day$(DAY).txt" ]; then \
+			echo "Input file not found. Downloading..."; \
+			$(MAKE) download DAY=$(DAY); \
+		fi; \
+		INPUT_PATH="$(PWD)/inputs/$(YEAR)/day$(DAY).txt"; \
+		echo "Building day$(DAY) in release mode..."; \
+		cd $(YEAR)/day$(DAY) && dune build --profile release && cd ../../; \
+		echo "Running day$(DAY) with input $$INPUT_PATH..."; \
+		if OUTPUT=$$(cd $(YEAR)/day$(DAY) && cat "$$INPUT_PATH" | dune exec --profile release ./test.exe 2>&1); then \
+			echo "$$OUTPUT"; \
+			PART1=$$(echo "$$OUTPUT" | grep "Part 1:" | cut -d':' -f2 | tr -d ' '); \
+			PART2=$$(echo "$$OUTPUT" | grep "Part 2:" | cut -d':' -f2 | tr -d ' '); \
+			mkdir -p answers/$(YEAR); \
+			if [ ! -z "$$PART1" ]; then \
+				echo "Part1: $$PART1" > "$$ANSWER_FILE"; \
+			fi; \
+			if [ ! -z "$$PART2" ]; then \
+				echo "Part2: $$PART2" >> "$$ANSWER_FILE"; \
+			fi; \
+			if [ -f "$$ANSWER_FILE" ]; then \
+				echo "Answers saved to $$ANSWER_FILE"; \
+			else \
+				echo "Failed to save answers - no valid output found"; \
+				exit 1; \
+			fi; \
+		else \
+			echo "Solution failed to run:"; \
+			echo "$$OUTPUT"; \
+			echo ""; \
+			echo "Please fix your solution before submitting."; \
+			echo "You can run: make run-day DAY=$(DAY) INPUT=download"; \
+			exit 1; \
+		fi; \
+	fi; \
+	\
+	if [ ! -f "$$ANSWER_FILE" ]; then \
+		echo "Answers file still doesn't exist after running solution!"; \
+		exit 1; \
+	fi; \
+	\
+	ANSWER=$$(grep "^Part$(PART):" "$$ANSWER_FILE" 2>/dev/null | cut -d':' -f2 | sed 's/\[Status:.*\]//g' | tr -d ' ' | head -n1); \
+	if [ -z "$$ANSWER" ]; then \
+		echo "No answer found for Part $(PART) in $$ANSWER_FILE!"; \
+		echo "Current contents of answers file:"; \
+		cat "$$ANSWER_FILE" 2>/dev/null || echo "(file is empty or doesn't exist)"; \
+		exit 1; \
+	fi; \
+	\
+	# Check if this part is already marked as correct in local file \
+	if grep -q "^Part$(PART):.*\[Status: Correct\]" "$$ANSWER_FILE" 2>/dev/null; then \
+		echo "Part $(PART) is already marked as correct in the local answers file."; \
+		echo "Use FORCE=1 to submit anyway."; \
+		if [ "$${FORCE:-}" != "1" ]; then \
+			exit 0; \
+		fi; \
+	fi; \
+	\
+	echo "Found answer for Day $(DAY) Part $(PART): $$ANSWER"; \
 	echo "Submitting answer..."; \
-	DAY_NUM=$$(echo $(DAY) | sed 's/^0*//'); \
 	RESPONSE=$$(curl -s -X POST --cookie "session=$$SESSION_TOKEN" \
 		-H "User-Agent: github.com/advent-of-code-ocaml" \
 		-d "level=$(PART)&answer=$$ANSWER" \
 		"https://adventofcode.com/$(YEAR)/day/$$DAY_NUM/answer"); \
 	if echo "$$RESPONSE" | grep -q "That's the right answer!"; then \
-		echo "Correct answer! Well done."; \
+		echo "Correct answer! Well done. ✓"; \
 		sed -i "s/^Part$(PART): $$ANSWER\(\s*\[Status:.*\]\)\?$$/Part$(PART): $$ANSWER [Status: Correct]/" "$$ANSWER_FILE"; \
 	elif echo "$$RESPONSE" | grep -q "You gave an answer too recently"; then \
 		if echo "$$RESPONSE" | grep -q "You have \([0-9]*m [0-9]*s\)"; then \
@@ -669,8 +777,8 @@ help:
 	@echo "  clean           : Clean all build artifacts"
 	@echo "  new-day         : Create a new day from template (interactive)"
 	@echo "  setup           : Setup project from scratch"
-	@echo "  run-day         : Run a specific day with input (DAY=XX INPUT=path/to/input.txt)"
-	@echo "  run-release     : Build and run a specific day in release mode (DAY=XX INPUT=path/to/input.txt or INPUT=puzzle_input)"
+	@echo "  run-day         : Run a specific day with input and save answers (DAY=XX INPUT=path/to/input.txt)"
+	@echo "  run-release     : Build and run a specific day in release mode and save answers (DAY=XX INPUT=path/to/input.txt or INPUT=puzzle_input)"
 	@echo "  run-current     : Run the current day with input (INPUT=path/to/input.txt)"
 	@echo ""
 	@echo "  make download DAY=XX                      : Download puzzle input for day XX"
@@ -679,7 +787,7 @@ help:
 	@echo "  make run-submit DAY=XX INPUT=path         : Run day XX and prompt to submit answers"
 	@echo "  make run-submit DAY=XX INPUT=download     : Download input, run day XX, and prompt to submit"
 	@echo ""
-	@echo "Flake Commands (Nix 2.4+):"
+	@echo "Flake Commands (Nix 24.XX+):"
 	@echo "  make flake-dev                                : Enter flake development shell"
 	@echo "  make flake-build DAY=XX YEAR=YYYY             : Build specific day with flakes"
 	@echo "  make flake-run DAY=XX YEAR=YYYY               : Run specific day with flakes"
@@ -693,6 +801,6 @@ help:
 	@echo "  make test-03                                           # Run tests for day03"
 	@echo "  make run-day DAY=02 INPUT=../inputs/2024/day02.txt     # Run day02 with specified input"
 	@echo "  make run-current DAY=02 INPUT=download     # Run day02 with specified input"
-	@echo "  make run-release DAY=01 INPUT=puzzle_input             # Build and run day01 in release mode with default input"
+	@echo "  make run-release DAY=01 INPUT=puzzle_input             # Build and run day01 in release mode with default  and save the answers"
 	@echo "  make run-submit DAY=01 INPUT=download                  # Download input, run day01 in release mode, and prompt to submit"
 	@echo ""
