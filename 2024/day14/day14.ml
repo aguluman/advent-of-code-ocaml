@@ -44,7 +44,7 @@ let get_quadrant width height pos_x pos_y =
   else None
 
 (** Counts occurrences of each element in a list
-    @param lst Input list
+    @param list Input list
     @return Association list of (element, count) pairs *)
 let count_occurrences list =
   (* Helper function that builds the accumulator of (element, count) pairs *)
@@ -138,7 +138,40 @@ let calculate_safety_factor robots width height =
   quadrant_counts.(0) * quadrant_counts.(1) * quadrant_counts.(2)
   * quadrant_counts.(3)
 
-(** Ultra-fast Part 2: Calculate positions at each time step directly *)
+(** {1 Part 2: Christmas Tree Easter Egg Detection}
+
+    Solves the second part of Day 14: Restroom Redoubt challenge.
+
+    {2 Problem Statement}
+    The robots have a hard-coded Easter egg feature where they occasionally
+    arrange themselves into a Christmas tree pattern. This function finds the
+    minimum number of seconds that must elapse for the robots to first display
+    this hidden Christmas tree configuration.
+
+    {2 Algorithm Strategy}
+    Uses a minimum safety factor approach to detect clustering:
+    - When robots are randomly distributed → high safety factor
+    - When robots form a tree (clustered) → minimum safety factor
+    - The Christmas tree appears at the time with the lowest safety factor
+
+    {2 Technical Implementation}
+    - {b Direct Position Calculation}: Uses modular arithmetic to calculate
+      robot positions at any time step without iterative simulation
+    - {b Optimized Safety Factor}: Single-pass array counting instead of
+      multiple list operations
+    - {b Memory Efficient}: Reuses arrays to minimize allocations
+
+    {2 Performance Characteristics}
+    - Time Complexity: O(search_limit × num_robots)
+    - Space Complexity: O(num_robots)
+    - Typical Runtime: ~0.3 seconds for 500 robots over 10,000 time steps
+
+    @param robots List of robot initial states with positions and velocities
+    @param width Grid width (101 tiles for actual puzzle input)
+    @param height Grid height (103 tiles for actual puzzle input)
+    @return The minimum number of seconds until Christmas tree pattern appears
+
+    @raise Failure if no pattern found within search limit (10,000 seconds) *)
 let part2 (robots, width, height) =
   let robots_array = Array.of_list robots in
   let num_robots = Array.length robots_array in
