@@ -159,6 +159,18 @@ new-day:
 	echo "Creating $(YEAR)/day$$day..."; \
 	mkdir -p "$(YEAR)/day$$day"; \
 	cp -r day_template/* "$(YEAR)/day$$day/"; \
+	cp day_template/.ocamlformat "$(YEAR)/day$$day/"; \
+	\
+	# Copy .ocamlformat file if it exists in template or use existing one from another day \
+	if [ -f "day_template/.ocamlformat" ]; then \
+		cp "day_template/.ocamlformat" "$(YEAR)/day$$day/"; \
+	elif [ -f "$(YEAR)/day01/.ocamlformat" ]; then \
+		cp "$(YEAR)/day01/.ocamlformat" "$(YEAR)/day$$day/"; \
+		echo "Copied .ocamlformat from day01"; \
+	else \
+		echo "No .ocamlformat found, creating default one"; \
+		echo 'profile = default\nversion = 0.27.0\ntype-decl = sparse\nbreak-cases = fit-or-vertical\ndoc-comments = before' > "$(YEAR)/day$$day/.ocamlformat"; \
+	fi; \
 	\
 	# Fetch problem title from AOC website \
 	SESSION_TOKEN=$$(grep AUTH_TOKEN .env 2>/dev/null | cut -d'=' -f2 2>/dev/null || echo ""); \
