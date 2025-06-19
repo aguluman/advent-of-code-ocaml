@@ -20,18 +20,15 @@ type bathroom_quadrant =
     @param height Grid height
     @param robot Initial robot state
     @return Final robot state after simulation *)
-let rec simulate_movement steps width height robot =
-  if steps = 0 then robot
-  else
-    let pos_x, pos_y = robot.position in
-    let vel_x, vel_y = robot.velocity in
+let simulate_movement steps width height robot =
+  let pos_x, pos_y = robot.position in
+  let vel_x, vel_y = robot.velocity in
 
-    (* Apply wrapping using modulo arithmetic *)
-    let wrapped_position =
-      ((width + pos_x + vel_x) mod width, (height + pos_y + vel_y) mod height)
-    in
-    simulate_movement (steps - 1) width height
-      { robot with position = wrapped_position }
+  (* Calculate final position directly using modular arithmetic *)
+  let final_x = (((pos_x + (vel_x * steps)) mod width) + width) mod width in
+  let final_y = (((pos_y + (vel_y * steps)) mod height) + height) mod height in
+
+  { robot with position = (final_x, final_y) }
 
 (** Determines which quadrant a position falls in
     @param width Grid width
@@ -114,30 +111,68 @@ let visualize_positions robots width height =
   let grid = create_grid positions width height ' ' '@' in
   print_grid grid width height
 
-(** Core simulation logic for part 2
-    @param robots Initial robot states
+(** Calculates the safety factor for the current robot configuration
+    @param robots List of robot states
     @param width Grid width
     @param height Grid height
-    @return Time when Christmas tree pattern appears *)
+    @return
+      Product of counts in each quadrant Optimized safety factor calculation
+      using arrays *)
+let calculate_safety_factor robots width height =
+  let quadrant_counts = [| 0; 0; 0; 0 |] in
+  (* TopRight, TopLeft, BottomLeft, BottomRight *)
+
+  Array.iter
+    (fun robot ->
+      let pos_x, pos_y = robot.position in
+      if pos_x > width / 2 && pos_y < height / 2 then
+        quadrant_counts.(0) <- quadrant_counts.(0) + 1
+      else if pos_x < width / 2 && pos_y < height / 2 then
+        quadrant_counts.(1) <- quadrant_counts.(1) + 1
+      else if pos_x < width / 2 && pos_y > height / 2 then
+        quadrant_counts.(2) <- quadrant_counts.(2) + 1
+      else if pos_x > width / 2 && pos_y > height / 2 then
+        quadrant_counts.(3) <- quadrant_counts.(3) + 1)
+    robots;
+
+  quadrant_counts.(0) * quadrant_counts.(1) * quadrant_counts.(2)
+  * quadrant_counts.(3)
+
+(** Ultra-fast Part 2: Calculate positions at each time step directly *)
 let part2 (robots, width, height) =
-  let rec search elapsed robots =
-    if elapsed >= 1000 then ()
-    else (
-      visualize_positions robots width height;
-      Printf.printf "time = %d\n" elapsed;
-      search (elapsed + 1) (Array.map (simulate_movement 1 width height) robots))
-  in
-  let _ =
-    search 0 (Array.of_list robots)
-    (* Use let _ to ignore unit result *)
+  let robots_array = Array.of_list robots in
+  let num_robots = Array.length robots_array in
+  let current_robots =
+    Array.make num_robots { position = (0, 0); velocity = (0, 0) }
   in
 
-  (* Optimized ASCII Art Cycle Calculation *)
-  let rec find_first_valid p =
-    let num_q = 81 - 30 + (p * width) in
-    if num_q mod height = 0 then 81 + (p * width) else find_first_valid (p + 1)
+  let rec search elapsed min_safety min_time =
+    if elapsed > 10000 then min_time
+    else (
+      (* Calculate all robot positions at time elapsed *)
+      for i = 0 to num_robots - 1 do
+        current_robots.(i) <-
+          simulate_movement elapsed width height robots_array.(i)
+      done;
+
+      let safety = calculate_safety_factor current_robots width height in
+      let new_min_safety, new_min_time =
+        if safety < min_safety then (safety, elapsed) else (min_safety, min_time)
+      in
+      search (elapsed + 1) new_min_safety new_min_time)
   in
-  find_first_valid 0
+  search 0 Int.max_int (-1)
+
+(** Visualizes the pattern at a specific time to verify Christmas tree *)
+let visualize_at_time robots width height target_time =
+  let final_robots =
+    Array.map
+      (simulate_movement target_time width height)
+      (Array.of_list robots)
+  in
+  Printf.printf "Pattern at time %d:\n" target_time;
+  visualize_positions final_robots width height;
+  Printf.printf "\n"
 
 (** Parses input string into robot data
     @param input Raw input string in format "p=x,y v=dx,dy"

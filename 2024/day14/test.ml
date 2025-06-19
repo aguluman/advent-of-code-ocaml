@@ -35,7 +35,10 @@ let () =
 
   (robots, 101, 103) |> part1 |> Printf.printf "Part 1: %d\n";
 
-  (robots, 101, 103) |> part2 |> Printf.printf "Part 2: %d\n";
+  let christmas_tree_time = (robots, 101, 103) |> part2 in
+  Printf.printf "Part 2: %d\n" christmas_tree_time;
+
+  visualize_at_time robots 101 103 christmas_tree_time;
 
   let end_time = Unix.gettimeofday () in
   Printf.printf "Elapsed time: %.4f seconds\n" (end_time -. start_time)
