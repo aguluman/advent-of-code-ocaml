@@ -190,18 +190,25 @@ let part2 (_wires, gates) =
       StringMap.empty gates
   in
 
-  (* Check if there's a loop in the circuit *)
+  (* Optimized loop detection using hashtable for visited tracking *)
   let has_loop gate_by_out =
+    let visited = Hashtbl.create 64 in
     let rec dfs out path =
       if List.mem out path then true
-      else
+      else if Hashtbl.mem visited out then false
+      else (
+        Hashtbl.add visited out true;
         match StringMap.find_opt out gate_by_out with
         | None -> false
         | Some gate ->
             let left, right = gate.input in
-            dfs left (out :: path) || dfs right (out :: path)
+            dfs left (out :: path) || dfs right (out :: path))
     in
-    StringMap.exists (fun out _ -> dfs out []) gate_by_out
+    StringMap.exists
+      (fun out _ ->
+        Hashtbl.clear visited;
+        dfs out [])
+      gate_by_out
   in
 
   (* Collect all wires in the subcircuit for a given output *)
@@ -229,52 +236,42 @@ let part2 (_wires, gates) =
         | Xor -> "(" ^ left ^ ")xor(" ^ right ^ ")")
   in
 
+  (* Pre-compiled regex patterns *)
+  let xy_regex = Str.regexp "[xy][0-9]+" in
+  let op_regex = Str.regexp "\\(and\\|or\\|xor\\)" in
+
+  (* Optimized regex extraction *)
+  let extract_matches regex circuit =
+    let rec find_all pos acc =
+      try
+        let _ = Str.search_forward regex circuit pos in
+        let matched = Str.matched_string circuit in
+        find_all (Str.match_end ()) (matched :: acc)
+      with Not_found -> List.rev acc
+    in
+    find_all 0 []
+  in
+
+  (* Efficient chunking *)
+  let chunk_by_size size lst =
+    let rec chunk acc current count = function
+      | [] ->
+          if current = [] then List.rev acc
+          else List.rev (List.rev current :: acc)
+      | x :: xs ->
+          if count = size then chunk (List.rev current :: acc) [ x ] 1 xs
+          else chunk acc (x :: current) (count + 1) xs
+    in
+    chunk [] [] 0 lst
+  in
+
   (* Validate if a z-wire circuit matches expected binary adder pattern *)
   let valid out gate_by_out =
     let circuit = make out gate_by_out in
 
-    (* Extract XY matches *)
-    let extract_xy_matches circuit =
-      let regex = Str.regexp "[xy][0-9]+" in
-      let rec find_all pos acc =
-        try
-          let _ = Str.search_forward regex circuit pos in
-          let matched = Str.matched_string circuit in
-          find_all (Str.match_end ()) (matched :: acc)
-        with Not_found -> List.rev acc
-      in
-      find_all 0 []
-    in
-
-    (* Extract operation matches *)
-    let extract_operation_matches circuit =
-      let regex = Str.regexp "\\(and\\|or\\|xor\\)" in
-      let rec find_all pos acc =
-        try
-          let _ = Str.search_forward regex circuit pos in
-          let op = Str.matched_string circuit in
-          find_all (Str.match_end ()) (op :: acc)
-        with Not_found -> List.rev acc
-      in
-      find_all 0 []
-    in
-
-    (* chunkBySize implementation *)
-    let chunk_by_size size lst =
-      let rec chunk acc current count = function
-        | [] ->
-            if current = [] then List.rev acc
-            else List.rev (List.rev current :: acc)
-        | x :: xs ->
-            if count = size then chunk (List.rev current :: acc) [ x ] 1 xs
-            else chunk acc (x :: current) (count + 1) xs
-      in
-      chunk [] [] 0 lst
-    in
-
     (* validXY function *)
     let valid_xy =
-      let xy_matches = extract_xy_matches circuit in
+      let xy_matches = extract_matches xy_regex circuit in
       let xy_chunks = chunk_by_size 2 xy_matches in
       match xy_chunks with
       | [] -> true
@@ -314,7 +311,7 @@ let part2 (_wires, gates) =
 
     (* validOperation function *)
     let valid_operations =
-      let ops = extract_operation_matches circuit in
+      let ops = extract_matches op_regex circuit in
       match ops with
       | [] -> true
       | [ "xor" ] -> true (* i = 0 case *)
@@ -336,7 +333,7 @@ let part2 (_wires, gates) =
     valid_xy && valid_operations
   in
 
-  (* Main search function that finds the correct gate mapping *)
+  (* Main search function with aggressive optimizations *)
   let rec search i gate_by_out =
     if i >= 45 then Some gate_by_out
     else
@@ -344,10 +341,16 @@ let part2 (_wires, gates) =
       if valid out gate_by_out then search (i + 1) gate_by_out
       else
         let swaps = collect out gate_by_out in
+        let gate_bindings = StringMap.bindings gate_by_out in
+
+        (* Sort gate bindings to try more promising swaps first *)
+        let sorted_bindings =
+          List.sort (fun (a, _) (b, _) -> String.compare a b) gate_bindings
+        in
+
         let rec try_pick_swaps = function
           | [] -> None
           | swap_out :: rest_swaps ->
-              let gate_bindings = StringMap.bindings gate_by_out in
               let rec try_pick_targets = function
                 | [] -> try_pick_swaps rest_swaps
                 | (target_out, target_gate) :: rest_targets ->
@@ -359,9 +362,11 @@ let part2 (_wires, gates) =
                         |> StringMap.add swap_out target_gate
                         |> StringMap.add target_out current_gate
                       in
+                      (* Quick loop check first - fail fast *)
                       if has_loop new_gate_by_out then
                         try_pick_targets rest_targets
                       else
+                        (* More efficient validation check *)
                         let rec find_next_invalid j =
                           if j > 45 then 46 (* No invalid found *)
                           else if
@@ -372,10 +377,12 @@ let part2 (_wires, gates) =
                         in
                         let next_invalid = find_next_invalid 0 in
                         if i < next_invalid then
-                          search next_invalid new_gate_by_out
+                          match search next_invalid new_gate_by_out with
+                          | Some result -> Some result
+                          | None -> try_pick_targets rest_targets
                         else try_pick_targets rest_targets
               in
-              try_pick_targets gate_bindings
+              try_pick_targets sorted_bindings
         in
         try_pick_swaps swaps
   in
