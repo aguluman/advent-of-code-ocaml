@@ -1,4 +1,4 @@
-.PHONY: all build test release clean setup new-day run-day help benchmark benchmark-% fmt check run-release run-current download check-status submit run-submit
+.PHONY: all test clean new-day run-day help benchmark-% fmt fmt-% fmt-check fmt-check-% run-release run-current download check-status submit run-submit
 
 # Default target
 all: test
@@ -20,30 +20,6 @@ $(info Using year: $(YEAR))
 DAYS := $(wildcard $(YEAR)/day*)
 CURRENT_DAY := $(shell ls -dt $(YEAR)/day* 2>/dev/null | head -n 1)
 
-# Build all days in debug mode
-build:
-	@echo "Building all days..."
-	@for day in $(DAYS); do \
-		echo "Building $$day..."; \
-		cd $$day && dune build && cd ../..; \
-	done
-	@echo "✅ All days built successfully!"
-
-# Build a specific day
-build-%:
-	@echo "Building day $*..."
-	@cd $(YEAR)/day$* && dune build
-	@echo "✅ Day $* built successfully!"
-
-# Build all days in release mode
-release:
-	@echo "Building all days in release mode..."
-	@for day in $(DAYS); do \
-		echo "Building $$day in release mode..."; \
-		cd $$day && dune build --profile release && cd ../..; \
-	done
-	@echo "✅ All days built successfully in release mode!"
-
 # Run tests for all days
 test:
 	@echo "Running tests for all days..."
@@ -58,7 +34,6 @@ test:
 test-%:
 	@echo "Testing day $*..."
 	@cd $(YEAR)/day$* && dune test && echo "✅ All tests passed for day $*!" || echo "❌ Tests failed for day $*!"
-
 
 # Format all code using dune fmt
 fmt:
@@ -90,28 +65,6 @@ fmt-check-%:
 	@cd $(YEAR)/day$* && dune fmt --diff-command diff
 	@echo "✅ Formatting check completed for day $*!" 
 
-
-# Run benchmarks for all days using hyperfine
-benchmark:
-	@echo "Running benchmarks for all days using hyperfine..."
-	@mkdir -p benchmark
-	@for day in $(DAYS); do \
-		echo "Benchmarking $$day..."; \
-		if [ -f "inputs/$(YEAR)/$$(basename $$day).txt" ]; then \
-			INPUT_FILE="inputs/$(YEAR)/$$(basename $$day).txt"; \
-			echo "Using input file: $$INPUT_FILE"; \
-			cd $$day && \
-			dune build --profile release && \
-			hyperfine --warmup 3 --runs 10 \
-				--export-markdown "../../benchmark/benchmark_$$(basename $$day).md" \
-				"cat ../$$INPUT_FILE | dune exec --profile release ./test.exe" && \
-			cd ../..; \
-		else \
-			echo "No input file found for $$day, skipping benchmark"; \
-		fi; \
-	done
-	@echo "Benchmark results exported to benchmark/benchmark_dayXX.md files"
-
 # Run benchmark for a specific day using hyperfine
 benchmark-%:
 	@echo "Running benchmark for day $*..."
@@ -138,7 +91,6 @@ benchmark-%:
 		echo "You can download it with: make download DAY=$*"; \
 		exit 1; \
 	fi
-
 
 # Clean all build artifacts
 clean:
@@ -221,19 +173,6 @@ new-day:
 	fi; \
 	\
 	echo "Created $(YEAR)/day$$day successfully!"
-
-# Setup project from scratch
-setup:
-	@echo "Setting up project..."
-	@if [ ! -d "day_template" ]; then \
-		echo "Creating day_template directory..."; \
-		mkdir -p day_template; \
-		echo 'open OUnit2\nopen Day_template\n\nlet example_input = ""\n\nlet make_part1_test name input expected =\n  name >:: (fun _ ->\n    assert_equal expected (part1 input) ~printer:string_of_int)\n\nlet make_part2_test name input expected =\n  name >:: (fun _ ->\n    assert_equal expected (part2 input) ~printer:Int64.to_string)\n\nlet part1_tests = [\n  make_part1_test "example_part1" example_input 0;\n]\n\nlet part2_tests = [\n  make_part2_test "example_part2" example_input 0L;\n]\n\nlet suite = "Day_template Test Suite" >::: [\n  "Part 1 Tests" >::: part1_tests;\n  "Part 2 Tests" >::: part2_tests;\n]\n\nlet () = run_test_tt_main suite\n\nlet () =\n  try\n    let input = In_channel.input_all In_channel.stdin |> String.trim in\n    let start_time = Unix.gettimeofday () in\n    input |> part1 |> Printf.printf "Part 1: %d\\n%!";\n    input |> part2 |> Printf.printf "Part 2: %Ld\\n%!";\n    let end_time = Unix.gettimeofday () in\n    Printf.printf "Elapsed time: %.4f seconds\\n%!" (end_time -. start_time);\n  with\n  | Failure msg -> Printf.printf "Error: %s\\n" msg\n  | e -> Printf.printf "Unexpected error: %s\\n" (Printexc.to_string e)' > day_template/test_template.ml; \
-		echo 'let parse_input input =\n  input\n  |> String.split_on_char '"'"'\\n'"'"'\n  |> List.filter (fun line -> String.trim line <> "")\n  |> List.map String.trim\n\nlet part1 input =\n  let data = parse_input input in\n  (* TODO: Implement part 1 solution *)\n  0\n\nlet part2 input =\n  let data = parse_input input in\n  (* TODO: Implement part 2 solution *)\n  0L' > day_template/day_template.ml; \
-		echo '(executable\n (name test_template)\n (libraries base stdio ounit2 str))' > day_template/dune; \
-		echo '(lang dune 3.0)' > day_template/dune-project; \
-	fi
-	@echo "✅ Project setup completed successfully!"
 
 # Run a specific day with input file
 run-day:
@@ -754,7 +693,6 @@ run-submit:
 		fi; \
 	fi
 
-
 # Add flake targets
 .PHONY: flake-build flake-run flake-dev
 
@@ -770,30 +708,24 @@ flake-dev:
 flake-update:
 	nix flake update
 
-
 # Show help
 help:
 	@echo "Advent of Code OCaml - Makefile Help"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  all             : Run tests and linting (default)"
-	@echo "  build           : Build all days in debug mode"
-	@echo "  build-XX        : Build a specific day (e.g., build-01)"
-	@echo "  release         : Build all days in release mode"
 	@echo "  test            : Run tests for all days"
 	@echo "  test-XX         : Run tests for a specific day (e.g., test-01)"
 	@echo "  fmt             : Format all code"
 	@echo "  fmt-XX          : Format code for a specific day (e.g., fmt-01)"
 	@echo "  fmt-check       : Check formatting for all code"
 	@echo "  fmt-check-XX    : Check formatting for a specific day (e.g., fmt-check-01)"
-	@echo "  benchmark       : Run benchmarks for all days (if available)"
 	@echo "  benchmark-XX    : Run benchmark for a specific day (e.g., benchmark-09)"
 	@echo "  clean           : Clean all build artifacts"
 	@echo "  new-day         : Create a new day from template (interactive)"
-	@echo "  setup           : Setup project from scratch"
 	@echo "  run-day         : Run a specific day with input and save answers"
 	@echo "  run-release     : Build and run a specific day in release mode and save answers"
-	@echo "  run-current     : Run the current day with input (auto-detects most recent day, no answer saving)"
+	@echo "  run-current     : Run the most recently modified day with input (workflow-aware, no answer saving)"
 	@echo ""
 	@echo "  make download DAY=XX                      : Download puzzle input for day XX"
 	@echo "  make check-status DAY=XX                  : Check submission status for day XX"
@@ -814,7 +746,7 @@ help:
 	@echo "  make build-01                                          # Build day01"
 	@echo "  make test-03                                           # Run tests for day03"
 	@echo "  make run-day DAY=02 INPUT=download                     # Run day02 with specified input"
-	@echo "  make run-current INPUT=download                        # Download input and run the most recent day challenge"
+	@echo "  make run-current INPUT=download                        # Download input and run the most recently modified day"
 	@echo "  make run-release DAY=01 INPUT=puzzle_input             # Build and run day01 in release mode with default  and save the answers"
 	@echo "  make run-submit DAY=01 INPUT=download                  # Download input, run day01 in release mode, and prompt to submit"
 	@echo ""
