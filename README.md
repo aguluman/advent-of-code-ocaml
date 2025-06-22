@@ -119,7 +119,7 @@ Then use the appropriate command for your operating system:
 ```
 
 **Note:** The Makefile commands (like `make run-day DAY=01 INPUT=download`) are recommended as they handle paths automatically and provide additional features like answer saving.
-```
+
 
 ## Configuration
 
