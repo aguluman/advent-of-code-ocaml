@@ -100,14 +100,25 @@ This project includes a comprehensive Makefile with various commands to help you
 
 ## Manual Execution
 
-The command used on Windows OS to read the input file and run the code is:
+For manual execution without using the Makefile commands, navigate to the specific day directory first:
+
 ```bash
-  type "inputs/2024/day01.txt" | dune exec ./test.exe
+cd 2024/day01
 ```
 
-The command used on Linux OS to read the input file and run the code is:
+Then use the appropriate command for your operating system:
+
+**Windows:**
 ```bash
-  cat "inputs/2024/day01.txt" | dune exec ./test.exe
+  type "../../inputs/2024/day01.txt" | dune exec ./test.exe
+```
+
+**Linux:**
+```bash
+  cat "../../inputs/2024/day01.txt" | dune exec ./test.exe
+```
+
+**Note:** The Makefile commands (like `make run-day DAY=01 INPUT=download`) are recommended as they handle paths automatically and provide additional features like answer saving.
 ```
 
 ## Configuration
