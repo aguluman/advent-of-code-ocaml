@@ -13,19 +13,6 @@ To get started with OCaml development:
 
 This project includes a comprehensive Makefile with various commands to help you build, test, and run solutions efficiently.
 
-### Building
-
-```bash
-  # Build all days in debug mode
-  make build
-
-  # Build a specific day (e.g., day 01)
-  make build-01
-
-  # Build all days in release mode (optimized)
-  make release
-```
-
 ### Testing
 
 ```bash
@@ -36,47 +23,56 @@ This project includes a comprehensive Makefile with various commands to help you
   make test-01
 ```
 
+### Code Formatting
+
+```bash
+  # Format all code using dune fmt
+  make fmt
+
+  # Format code for a specific day (e.g., day 01)
+  make fmt-01
+```
+
 ### Running Solutions
 
 ```bash
-  # Run a specific day with downloaded input
+  # Run a specific day with downloaded input (auto-saves answers)
   make run-day DAY=01 INPUT=download
 
   # Run a specific day with custom input file
   make run-day DAY=01 INPUT=path/to/input.txt
 
-  # Run the most recent day with downloaded input
-  make run-current INPUT=download
+  # Run a specific day using repository inputs or fallback locations
+  make run-day DAY=01 INPUT=puzzle_input
 
-  # Run in release mode (faster execution)
+  # Run in release mode (faster execution, auto-saves answers)
   make run-release DAY=01 INPUT=download
+  make run-release DAY=01 INPUT=puzzle_input
+
+  # Run the most recently modified day with input (workflow-aware, no answer saving)"
+  make run-current INPUT=download
+  make run-current INPUT=puzzle_input
 ```
 
 ### Project Management
 
 ```bash
-  # Create a new day from template
+  # Create a new day from template (interactive, auto-fetches problem title)
   make new-day
 
   # Download puzzle input (requires AUTH_TOKEN in .env file)
   make download DAY=01
 
-  # Clean build artifacts
+  # Force download input (overwrite existing)
+  make download DAY=01 FORCE=1
+
+  # Clean all build artifacts
   make clean
-
-  # Format code
-  make fmt
-
-  # Check code formatting
-  make fmt-check
 ```
 
 ### Benchmarking
 
 ```bash
-  # Run benchmarks for all days
-  make benchmark
-
   # Run benchmark for a specific day
   make benchmark-01
 ```
@@ -89,8 +85,9 @@ This project includes a comprehensive Makefile with various commands to help you
 
   # Submit an answer (requires AUTH_TOKEN in .env file)
   make submit DAY=01 PART=1
+  make submit DAY=01 PART=2
 
-  # Run solution and optionally submit answers
+  # Run solution with interactive submission prompts
   make run-submit DAY=01 INPUT=download
 ```
 
@@ -105,12 +102,12 @@ This project includes a comprehensive Makefile with various commands to help you
 
 The command used on Windows OS to read the input file and run the code is:
 ```bash
-type "C:\path\to\your\input.txt" | dune exec ./test.exe
+  type "inputs/2024/day01.txt" | dune exec ./test.exe
 ```
 
 The command used on Linux OS to read the input file and run the code is:
 ```bash
-cat "/path/to/your/input.txt" | dune exec ./test.exe
+  cat "inputs/2024/day01.txt" | dune exec ./test.exe
 ```
 
 ## Configuration
@@ -152,8 +149,4 @@ direnv allow
 
 ## Notes
 
-- The parse function for each challenge question's input file was designed to handle the `CRLF` end of line sequence.
-
-- My solution to [day 24 part two challenge question is wrong](https://github.com/aguluman/advent-of-code-2024-ocaml/issues/1). I have not been able to figure out a solution to achieve the correct answer.
-
-- **I need help**. If you have the knowledge or information please create a [Pull Request](https://github.com/aguluman/advent-of-code-2024-ocaml/pulls).
+- The parse function for each challenge question's input file was designed to handle the `LF` end of line sequence.
