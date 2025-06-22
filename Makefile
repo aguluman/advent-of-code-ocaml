@@ -25,8 +25,11 @@ test:
 	@echo "Running tests for all days..."
 	@for day in $(DAYS); do \
 		echo "Testing $$day..."; \
-		cd $$day && dune test && echo "✅ $$day tests passed!" || echo "❌ $$day tests failed!"; \
-		cd ../..; \
+		if [ -d "$$day" ]; then \
+			(cd $$day && dune test && echo "✅ $$day tests passed!" || echo "❌ $$day tests failed!"); \
+		else \
+			echo "Warning: Directory $$day does not exist, skipping..."; \
+		fi; \
 	done
 	@echo "🎉 All tests completed!"
 
@@ -40,9 +43,13 @@ fmt:
 	@echo "Formatting all days..."
 	@for day in $(DAYS); do \
 		echo "Formatting $$day..."; \
-		cd $$day && dune fmt && cd ../..; \
+		if [ -d "$$day" ]; then \
+			(cd $$day && dune fmt --auto-promote); \
+		else \
+			echo "Warning: Directory $$day does not exist, skipping..."; \
+		fi; \
 	done
-	@echo "✅ All days formatted successfully!"
+	@echo "✅ All days formatting completed!"
 
 # Format a specific day
 fmt-%:
@@ -55,7 +62,11 @@ fmt-check:
 	@echo "Checking formatting for all days..."
 	@for day in $(DAYS); do \
 		echo "Checking formatting for $$day..."; \
-		cd $$day && dune fmt --diff-command diff && cd ../..; \
+		if [ -d "$$day" ]; then \
+			(cd $$day && dune fmt --diff-command diff); \
+		else \
+			echo "Warning: Directory $$day does not exist, skipping..."; \
+		fi; \
 	done
 	@echo "✅ All formatting checks completed!"
 
@@ -97,7 +108,11 @@ clean:
 	@echo "Cleaning build artifacts..."
 	@for day in $(DAYS); do \
 		echo "Cleaning $$day..."; \
-		cd $$day && dune clean && cd ../..; \
+		if [ -d "$$day" ]; then \
+			(cd $$day && dune clean); \
+		else \
+			echo "Warning: Directory $$day does not exist, skipping..."; \
+		fi; \
 	done
 	@echo "✅ All build artifacts cleaned successfully!"
 

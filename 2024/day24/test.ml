@@ -86,25 +86,34 @@ let () = run_test_tt_main suite
 let () =
   try
     (* Read input from stdin *)
-    let input = In_channel.input_all In_channel.stdin |> String.trim in
-    Printf.printf "Input length: %d\n%!" (String.length input);
+    let has_input =
+      try
+        let _ = Unix.select [ Unix.stdin ] [] [] 0.0 in
+        true
+      with Unix.Unix_error _ -> false
+    in
 
-    (* Parse input into wires and gates *)
-    let wires, gates = parse input in
-    Printf.printf "Wires and Gates count: %d, %d\n%!" (List.length wires)
-      (List.length gates);
+    if has_input then
+      let input = In_channel.input_all In_channel.stdin |> String.trim in
+      if String.length input > 0 then (
+        Printf.printf "Input length: %d\n%!" (String.length input);
 
-    (* Solve Part 1 and Part 2 with timing *)
-    let start_time = Unix.gettimeofday () in
+        (* Parse input into wires and gates *)
+        let wires, gates = parse input in
+        Printf.printf "Wires and Gates count: %d, %d\n%!" (List.length wires)
+          (List.length gates);
 
-    let result1 = part1 (wires, gates) in
-    let result2 = part2 (wires, gates) in
+        (* Solve Part 1 and Part 2 with timing *)
+        let start_time = Unix.gettimeofday () in
 
-    let end_time = Unix.gettimeofday () in
+        let result1 = part1 (wires, gates) in
+        let result2 = part2 (wires, gates) in
 
-    Printf.printf "Part 1: %Ld\n%!" result1;
-    Printf.printf "Part 2: %s\n%!" result2;
-    Printf.printf "Elapsed time: %.4f seconds\n%!" (end_time -. start_time)
+        let end_time = Unix.gettimeofday () in
+
+        Printf.printf "Part 1: %Ld\n%!" result1;
+        Printf.printf "Part 2: %s\n%!" result2;
+        Printf.printf "Elapsed time: %.4f seconds\n%!" (end_time -. start_time))
   with
   | Failure msg -> Printf.printf "Error: %s\n" msg
   | Invalid_argument arg -> Printf.printf "Invalid argument: %s\n" arg

@@ -31,14 +31,22 @@ let () = run_test_tt_main suite
 
 let () =
   (* Read input from stdin *)
-  let input = In_channel.input_all In_channel.stdin |> String.trim in
+  let has_input =
+    try
+      let _ = Unix.select [ Unix.stdin ] [] [] 0.0 in
+      true
+    with Unix.Unix_error _ -> false
+  in
 
-  let location_ids = parse input in
+  if has_input then
+    let input = In_channel.input_all In_channel.stdin |> String.trim in
+    if String.length input > 0 then (
+      let timer_start = Unix.gettimeofday () in
 
-  let start_time = Unix.gettimeofday () in
+      let location_ids = parse input in
 
-  location_ids |> part1 |> Printf.printf "Part 1: %d\n";
-  location_ids |> part2 |> Printf.printf "Part 2: %Ld\n";
+      location_ids |> part1 |> Printf.printf "Part 1: %d\n%!";
+      location_ids |> part2 |> Printf.printf "Part 2: %Ld\n%!";
 
-  let end_time = Unix.gettimeofday () in
-  Printf.printf "Elapsed time: %.4f seconds\n%!" (end_time -. start_time)
+      Unix.gettimeofday () -. timer_start
+      |> Printf.printf "Elapsed time: %.4f seconds\n%!")

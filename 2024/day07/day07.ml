@@ -5,10 +5,8 @@ let part1 equations =
     | h :: t ->
         let new_acc =
           List.fold_left
-            (fun acc s -> 
-              (Int64.add s h) :: (Int64.mul s h) :: acc)
-            []
-            acc
+            (fun acc s -> Int64.add s h :: Int64.mul s h :: acc)
+            [] acc
         in
         collect_result t new_acc
   in
@@ -30,12 +28,10 @@ let part2 equations =
         let new_acc =
           List.fold_left
             (fun acc s ->
-              (Int64.add s h)
-              :: (Int64.mul s h)
-              :: (Int64.of_string (Int64.to_string s ^ Int64.to_string h))
+              Int64.add s h :: Int64.mul s h
+              :: Int64.of_string (Int64.to_string s ^ Int64.to_string h)
               :: acc)
-            []
-            acc
+            [] acc
         in
         collect_result t new_acc
   in
@@ -48,13 +44,12 @@ let part2 equations =
 
 let parse input =
   String.split_on_char '\n' input
+  |> List.filter (fun line -> String.trim line <> "")
   |> List.map (fun line ->
          match String.split_on_char ':' line with
          | [ num; values ] ->
              ( Int64.of_string (String.trim num),
                String.split_on_char ' ' (String.trim values)
-               |> List.filter (fun s -> s <> "")
-               |> List.map Int64.of_string
-               |> List.to_seq )
-         | _ -> failwith "Invalid input format")
-
+               |> List.filter (fun s -> String.trim s <> "")
+               |> List.map Int64.of_string |> List.to_seq )
+         | _ -> failwith ("Invalid input format: " ^ line))

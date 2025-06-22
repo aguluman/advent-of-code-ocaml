@@ -29,16 +29,25 @@ let () = run_test_tt_main suite
 
 (* Main entry for day 14 algorithm *)
 let () =
-  let input = In_channel.input_all In_channel.stdin |> String.trim in
-  let robots = parse input in
-  let start_time = Unix.gettimeofday () in
+  let has_input =
+    try
+      let _ = Unix.select [ Unix.stdin ] [] [] 0.0 in
+      true
+    with Unix.Unix_error _ -> false
+  in
 
-  (robots, 101, 103) |> part1 |> Printf.printf "Part 1: %d\n";
+  if has_input then
+    let input = In_channel.input_all In_channel.stdin |> String.trim in
+    if String.length input > 0 then (
+      let robots = parse input in
+      let start_time = Unix.gettimeofday () in
 
-  let christmas_tree_time = (robots, 101, 103) |> part2 in
-  Printf.printf "Part 2: %d\n" christmas_tree_time;
+      (robots, 101, 103) |> part1 |> Printf.printf "Part 1: %d\n";
 
-  visualize_at_time robots 101 103 christmas_tree_time;
+      let christmas_tree_time = (robots, 101, 103) |> part2 in
+      Printf.printf "Part 2: %d\n" christmas_tree_time;
 
-  let end_time = Unix.gettimeofday () in
-  Printf.printf "Elapsed time: %.4f seconds\n" (end_time -. start_time)
+      visualize_at_time robots 101 103 christmas_tree_time;
+
+      let end_time = Unix.gettimeofday () in
+      Printf.printf "Elapsed time: %.4f seconds\n" (end_time -. start_time))

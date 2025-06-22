@@ -28,13 +28,22 @@ let () = run_test_tt_main suite
 
 (** Main day13.ml program entry point *)
 let () =
-  In_channel.input_all In_channel.stdin
-  |> String.trim |> parse
-  |> (fun machines ->
-  let start_time = Unix.gettimeofday () in
+  let has_input =
+    try
+      let _ = Unix.select [ Unix.stdin ] [] [] 0.0 in
+      true
+    with Unix.Unix_error _ -> false
+  in
 
-  machines |> calculate_minimum_tokens |> Printf.printf "Part 1: %d\n";
-  machines |> calculate_large_coordinate_tokens |> Printf.printf "Part 2: %Ld\n";
+  if has_input then
+    let input = In_channel.input_all In_channel.stdin |> String.trim in
+    if String.length input > 0 then (
+      let machines = parse input in
+      let start_time = Unix.gettimeofday () in
 
-  Unix.gettimeofday () -. start_time)
-  |> Printf.printf "Elapsed time: %.4f seconds\n"
+      machines |> calculate_minimum_tokens |> Printf.printf "Part 1: %d\n";
+      machines |> calculate_large_coordinate_tokens
+      |> Printf.printf "Part 2: %Ld\n";
+
+      Unix.gettimeofday () -. start_time
+      |> Printf.printf "Elapsed time: %.4f seconds\n")

@@ -1,3 +1,8 @@
 (executable
  (name test)
  (libraries base stdio ounit2 str unix))
+
+(rule
+ (alias runtest)
+ (action
+  (run ./test.exe)))

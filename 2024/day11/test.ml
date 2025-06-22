@@ -24,14 +24,23 @@ let () = run_test_tt_main suite
     with timing *)
 let () =
   try
-    let input = read_line () in
-    let timer_start = Unix.gettimeofday () in
+    let has_input =
+      try
+        let _ = Unix.select [ Unix.stdin ] [] [] 0.0 in
+        true
+      with Unix.Unix_error _ -> false
+    in
 
-    input |> part1 |> Printf.printf "Part 1: %d\n%!";
-    input |> part2 |> Printf.printf "Part 2: %Ld\n%!";
+    if has_input then
+      let input = In_channel.input_all In_channel.stdin |> String.trim in
+      if String.length input > 0 then (
+        let timer_start = Unix.gettimeofday () in
 
-    Unix.gettimeofday () -. timer_start
-    |> Printf.printf "Elapsed time: %.4f seconds\n%!"
+        input |> part1 |> Printf.printf "Part 1: %d\n%!";
+        input |> part2 |> Printf.printf "Part 2: %Ld\n%!";
+
+        Unix.gettimeofday () -. timer_start
+        |> Printf.printf "Elapsed time: %.4f seconds\n%!")
   with
   | Failure msg -> Printf.printf "Error: %s\n%!" msg
   | e -> Printf.printf "Unexpected error: %s\n%!" (Printexc.to_string e)

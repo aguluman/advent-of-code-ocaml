@@ -1,3 +1,8 @@
 (executable
  (name test)
- (libraries base stdio ounit2 domainslib zarith))
+ (libraries base stdio ounit2))
+
+(rule
+ (alias runtest)
+ (action
+  (run ./test.exe)))
