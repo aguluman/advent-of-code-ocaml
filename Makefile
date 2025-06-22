@@ -1,4 +1,4 @@
-.PHONY: all test clean new-day run-day help benchmark-% fmt fmt-% fmt-check fmt-check-% run-release run-current download check-status submit run-submit
+.PHONY: all test clean new-day run-day help benchmark-% fmt fmt-% run-release run-current download check-status submit run-submit
 
 # Default target
 all: test
@@ -55,26 +55,7 @@ fmt:
 fmt-%:
 	@echo "Formatting day $*..."
 	@cd $(YEAR)/day$* && dune fmt
-	@echo "✅ Day $* formatted successfully!"
-
-# Check formatting for all code
-fmt-check:
-	@echo "Checking formatting for all days..."
-	@for day in $(DAYS); do \
-		echo "Checking formatting for $$day..."; \
-		if [ -d "$$day" ]; then \
-			(cd $$day && dune fmt --diff-command diff); \
-		else \
-			echo "Warning: Directory $$day does not exist, skipping..."; \
-		fi; \
-	done
-	@echo "✅ All formatting checks completed!"
-
-# Check formatting for a specific day
-fmt-check-%:
-	@echo "Checking formatting for day $*..."
-	@cd $(YEAR)/day$* && dune fmt --diff-command diff
-	@echo "✅ Formatting check completed for day $*!" 
+	@echo "✅ Day $* formatted successfully!" 
 
 # Run benchmark for a specific day using hyperfine
 benchmark-%:

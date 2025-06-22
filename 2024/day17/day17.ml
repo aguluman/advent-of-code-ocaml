@@ -44,19 +44,19 @@ type cpu_state = {
 }
 
 (** Efficient power calculation for int64 values using binary exponentiation
-    
+
     Calculates base^exponent using the exponentiation by squaring algorithm,
     which reduces the number of multiplications needed from O(n) to O(log n).
     This implementation handles int64 values to support large numbers required
     by the computer's division operations.
-    
-    @param base      The base value to raise to a power
-    @param exponent  The non-negative exponent (must be >= 0)
-    @return          base raised to the power of exponent
-    
-    @example [power_of_two 2L 3L] returns 8L
-    @example [power_of_two 2L 10L] returns 1024L
-*)
+
+    @param base The base value to raise to a power
+    @param exponent The non-negative exponent (must be >= 0)
+    @return base raised to the power of exponent
+
+    {[
+      power_of_two 2L 3L = 8L power_of_two 2L 10L = 1024L
+    ]} *)
 let rec power_of_two base exponent =
   if exponent = 0L then 1L
   else if Int64.rem exponent 2L = 0L then
