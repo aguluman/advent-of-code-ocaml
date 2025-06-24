@@ -98,6 +98,30 @@ This project includes a comprehensive Makefile with various commands to help you
   make help
 ```
 
+## 🎥 Complete Automation Demo
+
+[![Advent of Code OCaml: Complete Automation Pipeline](https://img.youtube.com/vi/oYCMW7mid_8/0.jpg)](https://www.youtube.com/watch?v=oYCMW7mid_8)
+
+**🎄 Watch the Complete Automation Pipeline in Action!**
+
+See how this project eliminates all manual steps between solving and submitting Advent of Code solutions:
+
+🚀 **What the video demonstrates:**
+• Automatic puzzle input downloading with authentication
+• Lightning-fast OCaml solution execution (0.3s runtime!)
+• Beautiful Christmas tree visualization for Day 14 Part 2
+• Smart submission system that prevents duplicate submissions
+• Individual part submission (Part 1 & Part 2 separately)
+• Bulk submission with interactive prompts
+• Complete terminal-based workflow - no browser switching!
+
+⚡ **Key features shown:**
+- `make new-day` - Creates day template with problem title fetching
+- `make download DAY=14` - Auto-downloads puzzle input
+- `make run-current INPUT=download` - Runs latest solution with downloaded input
+- `make submit DAY=14 PART=1` - Smart individual part submission
+- `make run-submit DAY=14 INPUT=download` - Complete pipeline: download → run → submit
+
 ## Manual Execution
 
 For manual execution without using the Makefile commands, navigate to the specific day directory first:
