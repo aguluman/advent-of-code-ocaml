@@ -107,13 +107,13 @@ This project includes a comprehensive Makefile with various commands to help you
 See how this project eliminates all manual steps between solving and submitting Advent of Code solutions:
 
 🚀 **What the video demonstrates:**
-• Automatic puzzle input downloading with authentication
-• Lightning-fast OCaml solution execution (0.3s runtime!)
-• Beautiful Christmas tree visualization for Day 14 Part 2
-• Smart submission system that prevents duplicate submissions
-• Individual part submission (Part 1 & Part 2 separately)
-• Bulk submission with interactive prompts
-• Complete terminal-based workflow - no browser switching!
+- Automatic puzzle input downloading with authentication
+- Lightning-fast OCaml solution execution (0.3s runtime!)
+- Beautiful Christmas tree visualization for Day 14 Part 2
+- Smart submission system that prevents duplicate submissions
+- Individual part submission (Part 1 & Part 2 separately)
+- Bulk submission with interactive prompts
+- Complete terminal-based workflow - no browser switching!
 
 ⚡ **Key features shown:**
 - `make new-day` - Creates day template with problem title fetching
