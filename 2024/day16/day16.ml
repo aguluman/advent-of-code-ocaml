@@ -244,30 +244,30 @@ let generate_movement_edges maze =
     (List.init (Array.length maze) (fun i -> i))
     (List.init (Array.length maze.(0)) (fun j -> j))
   |> List.concat_map (fun (row, col) ->
-         (* Skip walls *)
-         if maze.(row).(col) = '#' then []
-         else
-           (* Create edges for each direction at this position *)
-           [ East; North; West; South ]
-           |> List.concat_map (fun dir ->
-                  let pos = { row; column = col; facing = dir } in
+      (* Skip walls *)
+      if maze.(row).(col) = '#' then []
+      else
+        (* Create edges for each direction at this position *)
+        [ East; North; West; South ]
+        |> List.concat_map (fun dir ->
+            let pos = { row; column = col; facing = dir } in
 
-                  (* Forward movement edge (cost 1) *)
-                  let forward_edge =
-                    match move_forward pos maze with
-                    | Some next_pos ->
-                        [ { from_pos = pos; to_pos = next_pos; cost = 1 } ]
-                    | None -> []
-                  in
+            (* Forward movement edge (cost 1) *)
+            let forward_edge =
+              match move_forward pos maze with
+              | Some next_pos ->
+                  [ { from_pos = pos; to_pos = next_pos; cost = 1 } ]
+              | None -> []
+            in
 
-                  (* Rotation edges (cost 1000) *)
-                  let rotation_edges =
-                    rotate_positions pos
-                    |> List.map (fun next_pos ->
-                           { from_pos = pos; to_pos = next_pos; cost = 1000 })
-                  in
+            (* Rotation edges (cost 1000) *)
+            let rotation_edges =
+              rotate_positions pos
+              |> List.map (fun next_pos ->
+                  { from_pos = pos; to_pos = next_pos; cost = 1000 })
+            in
 
-                  forward_edge @ rotation_edges))
+            forward_edge @ rotation_edges))
 
 (** Find coordinates of a specific character in the maze
     @param maze The maze layout
@@ -312,8 +312,8 @@ let solve_part1 maze =
   (* Find minimum distance to end in any direction *)
   [ East; North; West; South ]
   |> List.map (fun dir ->
-         let end_pos = { row = end_row; column = end_col; facing = dir } in
-         try PositionMap.find end_pos distances with Not_found -> max_int)
+      let end_pos = { row = end_row; column = end_col; facing = dir } in
+      try PositionMap.find end_pos distances with Not_found -> max_int)
   |> List.fold_left min max_int
 
 (** Solve part 2: Count tiles that are part of any minimum-score path

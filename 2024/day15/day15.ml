@@ -56,10 +56,10 @@ let parse input =
     String.split_on_char '\n' input
     |> List.filter (fun s -> s <> "")
     |> List.partition (fun s ->
-           String.length s > 0
-           && (String.contains "@O#." s.[0]
-              || String.length s > 1
-                 && (s.[0] = '@' || s.[0] = 'O' || s.[0] = '#' || s.[0] = '.')))
+        String.length s > 0
+        && (String.contains "@O#." s.[0]
+           || String.length s > 1
+              && (s.[0] = '@' || s.[0] = 'O' || s.[0] = '#' || s.[0] = '.')))
   in
 
   match parts with
@@ -74,10 +74,10 @@ let parse input =
       let moves =
         moves_str |> String.to_seq
         |> Seq.filter_map (function
-             | '^' -> Some Up
-             | 'v' -> Some Down
-             | '<' -> Some Left
-             | '>' -> Some Right
-             | _ -> None)
+          | '^' -> Some Up
+          | 'v' -> Some Down
+          | '<' -> Some Left
+          | '>' -> Some Right
+          | _ -> None)
       in
       (warehouse, moves)

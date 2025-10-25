@@ -93,21 +93,21 @@ let breadth_first_search (start_row, start_col) maze =
     (* Explore all four cardinal directions *)
     [ (-1, 0); (0, -1); (1, 0); (0, 1) ]
     |> List.iter (fun (delta_row, delta_col) ->
-           let neighbor_row, neighbor_col =
-             (current_row + delta_row, current_col + delta_col)
-           in
-           let neighbor_idx = calculate_index cols neighbor_row neighbor_col in
+        let neighbor_row, neighbor_col =
+          (current_row + delta_row, current_col + delta_col)
+        in
+        let neighbor_idx = calculate_index cols neighbor_row neighbor_col in
 
-           (* Check bounds, walls, and visited status *)
-           if
-             neighbor_row >= 0 && neighbor_row < rows && neighbor_col >= 0
-             && neighbor_col < cols
-             && maze.(neighbor_row).(neighbor_col) <> '#'
-             && Bytes.get visited neighbor_idx = '\000'
-           then (
-             OptimizedArray.set distances neighbor_idx next_dist;
-             Bytes.set visited neighbor_idx '\001';
-             Queue.push (neighbor_row, neighbor_col) frontier))
+        (* Check bounds, walls, and visited status *)
+        if
+          neighbor_row >= 0 && neighbor_row < rows && neighbor_col >= 0
+          && neighbor_col < cols
+          && maze.(neighbor_row).(neighbor_col) <> '#'
+          && Bytes.get visited neighbor_idx = '\000'
+        then (
+          OptimizedArray.set distances neighbor_idx next_dist;
+          Bytes.set visited neighbor_idx '\001';
+          Queue.push (neighbor_row, neighbor_col) frontier))
   done;
   distances
 
@@ -296,5 +296,5 @@ let parse input =
   input |> String.split_on_char '\n' |> List.to_seq
   |> Seq.filter (fun line -> String.trim line <> "")
   |> Seq.map (fun row ->
-         Array.of_list (List.init (String.length row) (String.get row)))
+      Array.of_list (List.init (String.length row) (String.get row)))
   |> Array.of_seq

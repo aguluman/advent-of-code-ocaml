@@ -27,17 +27,17 @@ let part1 reports = reports |> List.filter isSafe |> List.length
 let part2 reports =
   reports
   |> List.filter (fun report ->
-         List.init (List.length report) (fun x -> x)
-         |> List.exists (fun i -> isSafe (remove_at i report)))
+      List.init (List.length report) (fun x -> x)
+      |> List.exists (fun i -> isSafe (remove_at i report)))
   |> List.length
 
 let parse input =
   input |> String.split_on_char '\n'
   |> List.filter (fun line -> String.trim line <> "")
   |> List.map (fun line ->
-         line |> String.split_on_char ' '
-         |> List.filter (fun s -> String.trim s <> "")
-         |> List.map int_of_string)
+      line |> String.split_on_char ' '
+      |> List.filter (fun s -> String.trim s <> "")
+      |> List.map int_of_string)
 
 (*
   How to run am Ocam file in the console and read from an input, 

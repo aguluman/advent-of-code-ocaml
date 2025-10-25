@@ -12,31 +12,24 @@ let part1 chars =
 
   chars
   |> Array.mapi (fun i row ->
-         row
-         |> Array.mapi (fun j _ ->
-                let north = List.init 4 (fun d -> getC (i - d) j) in
-                let northWest = List.init 4 (fun d -> getC (i - d) (j - d)) in
-                let west = List.init 4 (fun d -> getC i (j - d)) in
-                let southWest = List.init 4 (fun d -> getC (i + d) (j - d)) in
-                let south = List.init 4 (fun d -> getC (i + d) j) in
-                let southEast = List.init 4 (fun d -> getC (i + d) (j + d)) in
-                let east = List.init 4 (fun d -> getC i (j + d)) in
-                let northEast = List.init 4 (fun d -> getC (i - d) (j + d)) in
+      row
+      |> Array.mapi (fun j _ ->
+          let north = List.init 4 (fun d -> getC (i - d) j) in
+          let northWest = List.init 4 (fun d -> getC (i - d) (j - d)) in
+          let west = List.init 4 (fun d -> getC i (j - d)) in
+          let southWest = List.init 4 (fun d -> getC (i + d) (j - d)) in
+          let south = List.init 4 (fun d -> getC (i + d) j) in
+          let southEast = List.init 4 (fun d -> getC (i + d) (j + d)) in
+          let east = List.init 4 (fun d -> getC i (j + d)) in
+          let northEast = List.init 4 (fun d -> getC (i - d) (j + d)) in
 
-                [
-                  north;
-                  northWest;
-                  west;
-                  southWest;
-                  south;
-                  southEast;
-                  east;
-                  northEast;
-                ]
-                |> List.filter (fun word ->
-                       word = [ Some 'X'; Some 'M'; Some 'A'; Some 'S' ])
-                |> List.length)
-         |> Array.fold_left ( + ) 0)
+          [
+            north; northWest; west; southWest; south; southEast; east; northEast;
+          ]
+          |> List.filter (fun word ->
+              word = [ Some 'X'; Some 'M'; Some 'A'; Some 'S' ])
+          |> List.length)
+      |> Array.fold_left ( + ) 0)
   |> Array.fold_left ( + ) 0
 
 (** Part 2: Count characters forming an X pattern with "MAS" on opposite sides
@@ -48,19 +41,19 @@ let part2 chars =
 
   chars
   |> Array.mapi (fun i row ->
-         row
-         |> Array.mapi (fun j c ->
-                let ne = getC (i - 1) (j + 1) in
-                let nw = getC (i - 1) (j - 1) in
-                let se = getC (i + 1) (j + 1) in
-                let sw = getC (i + 1) (j - 1) in
+      row
+      |> Array.mapi (fun j c ->
+          let ne = getC (i - 1) (j + 1) in
+          let nw = getC (i - 1) (j - 1) in
+          let se = getC (i + 1) (j + 1) in
+          let sw = getC (i + 1) (j - 1) in
 
-                if
-                  (isMAS (ne, Some c, sw) || isMAS (sw, Some c, ne))
-                  && (isMAS (nw, Some c, se) || isMAS (se, Some c, nw))
-                then 1
-                else 0)
-         |> Array.fold_left ( + ) 0)
+          if
+            (isMAS (ne, Some c, sw) || isMAS (sw, Some c, ne))
+            && (isMAS (nw, Some c, se) || isMAS (se, Some c, nw))
+          then 1
+          else 0)
+      |> Array.fold_left ( + ) 0)
   |> Array.fold_left ( + ) 0
 
 (** Parse the input string into a 2D character array *)

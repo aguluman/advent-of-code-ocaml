@@ -92,13 +92,13 @@ let make_move_test name input movement expected =
   assert_equal expected_map moved ~printer:(fun m ->
       m
       |> Array.map (fun row ->
-             row
-             |> Array.map (function
-                  | Robot -> "@"
-                  | Box -> "O"
-                  | Wall -> "#"
-                  | Empty -> ".")
-             |> Array.to_list |> String.concat "")
+          row
+          |> Array.map (function
+            | Robot -> "@"
+            | Box -> "O"
+            | Wall -> "#"
+            | Empty -> ".")
+          |> Array.to_list |> String.concat "")
       |> Array.to_list |> String.concat "\n")
 
 (** Basic movement tests *)
@@ -123,14 +123,14 @@ let make_direct_scale_up_test name input movement expected_str =
   let actual_str =
     moved
     |> Array.map (fun row ->
-           row
-           |> Array.map (function
-                | ScaledRobot -> "@"
-                | BoxL -> "["
-                | BoxR -> "]"
-                | ScaledWall -> "#"
-                | ScaledEmpty -> ".")
-           |> Array.to_list |> String.concat "")
+        row
+        |> Array.map (function
+          | ScaledRobot -> "@"
+          | BoxL -> "["
+          | BoxR -> "]"
+          | ScaledWall -> "#"
+          | ScaledEmpty -> ".")
+        |> Array.to_list |> String.concat "")
     |> Array.to_list |> String.concat "\n"
   in
   assert_equal expected_str actual_str
@@ -144,14 +144,14 @@ let make_scaled_move_test name input movement expected =
   assert_equal expected_map moved ~printer:(fun m ->
       m
       |> Array.map (fun row ->
-             row
-             |> Array.map (function
-                  | ScaledRobot -> "@"
-                  | BoxL -> "["
-                  | BoxR -> "]"
-                  | ScaledWall -> "#"
-                  | ScaledEmpty -> ".")
-             |> Array.to_list |> String.concat "")
+          row
+          |> Array.map (function
+            | ScaledRobot -> "@"
+            | BoxL -> "["
+            | BoxR -> "]"
+            | ScaledWall -> "#"
+            | ScaledEmpty -> ".")
+          |> Array.to_list |> String.concat "")
       |> Array.to_list |> String.concat "\n")
 
 (** Scaled movement tests - using direct string comparison for exact matching *)
@@ -163,14 +163,14 @@ let scaled_movement_tests =
       Printf.printf "\nScaled map representation:\n%s\n"
         (map
         |> Array.map (fun row ->
-               row
-               |> Array.map (function
-                    | ScaledRobot -> "@"
-                    | BoxL -> "["
-                    | BoxR -> "]"
-                    | ScaledWall -> "#"
-                    | ScaledEmpty -> ".")
-               |> Array.to_list |> String.concat "")
+            row
+            |> Array.map (function
+              | ScaledRobot -> "@"
+              | BoxL -> "["
+              | BoxR -> "]"
+              | ScaledWall -> "#"
+              | ScaledEmpty -> ".")
+            |> Array.to_list |> String.concat "")
         |> Array.to_list |> String.concat "\n") );
     (* Use direct string comparison for horizontal movements *)
     make_direct_scale_up_test "move_left_scaled test"

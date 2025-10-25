@@ -52,10 +52,9 @@ let part1 height_map =
   (* Generate all coordinates in the height_map *)
   range 0 (rows - 1) (* Create row indices *)
   |> List.map (fun row ->
-         (* For each row *)
-         range 0 (cols - 1) (* Create column indices *)
-         |> List.map (fun col -> (row, col)))
-     (* Make coordinates *)
+      (* For each row *)
+      range 0 (cols - 1) (* Create column indices *)
+      |> List.map (fun col -> (row, col))) (* Make coordinates *)
   |> List.concat (* Flatten the result *)
   |> List.fold_left (* Count paths from height 0 reaching height 9 *)
        (fun path_count (row, col) ->
@@ -94,7 +93,7 @@ let part2 height_map =
            then
              depth_first_search (next_row, next_col)
              |> PathSet.map (fun current_path ->
-                    (next_row, next_col) :: current_path)
+                 (next_row, next_col) :: current_path)
              (* Combining sets *)
              |> PathSet.union paths
            else paths)
@@ -104,14 +103,14 @@ let part2 height_map =
   (* Generate all coordinates and count paths *)
   range 0 (rows - 1)
   |> List.map (fun row ->
-         range 0 (cols - 1) |> List.map (fun col -> (row, col)))
+      range 0 (cols - 1) |> List.map (fun col -> (row, col)))
   |> List.concat
   |> List.fold_left
        (fun path_count (row, col) ->
          if height_map.(row).(col) = 0 then
            depth_first_search (row, col)
            |> PathSet.filter (fun path ->
-                  List.exists (fun (r, c) -> height_map.(r).(c) = 9) path)
+               List.exists (fun (r, c) -> height_map.(r).(c) = 9) path)
            (* Counting elements *)
            |> PathSet.cardinal
            |> ( + ) path_count
@@ -124,11 +123,10 @@ let parse input =
   input
   |> String.split_on_char '\n' (* Split into lines *)
   |> List.map (fun line ->
-         (* For each line *)
-         String.trim line |> String.to_seq (* Convert string to sequence *)
-         |> List.of_seq (* Convert sequence to list *)
-         |> List.map (fun c -> int_of_char c - int_of_char '0')
-            (* Convert to ints *)
-         |> Array.of_list)
-     (* Convert to array *)
+      (* For each line *)
+      String.trim line |> String.to_seq (* Convert string to sequence *)
+      |> List.of_seq (* Convert sequence to list *)
+      |> List.map (fun c -> int_of_char c - int_of_char '0')
+        (* Convert to ints *)
+      |> Array.of_list) (* Convert to array *)
   |> Array.of_list (* Convert outer list to array *)

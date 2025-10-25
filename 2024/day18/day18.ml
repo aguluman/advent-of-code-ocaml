@@ -168,15 +168,15 @@ let parse_byte_positions input =
   let lines = input |> String.split_on_char '\n' |> preprocess_lines in
   lines
   |> List.filter_map (fun line ->
-         let parts = String.split_on_char ',' line in
-         match parts with
-         | x_str :: y_str :: _ -> (
-             match (safe_int_of_string x_str, safe_int_of_string y_str) with
-             | Some x, Some y -> Some (x, y)
-             | _ ->
-                 Printf.printf "Skipping invalid line: %s\n" line;
-                 None)
-         | _ ->
-             Printf.printf "Invalid format: %s\n" line;
-             None)
+      let parts = String.split_on_char ',' line in
+      match parts with
+      | x_str :: y_str :: _ -> (
+          match (safe_int_of_string x_str, safe_int_of_string y_str) with
+          | Some x, Some y -> Some (x, y)
+          | _ ->
+              Printf.printf "Skipping invalid line: %s\n" line;
+              None)
+      | _ ->
+          Printf.printf "Invalid format: %s\n" line;
+          None)
   |> List.to_seq

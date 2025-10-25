@@ -64,13 +64,13 @@ let solve_grid grid position_mapper =
 
   valid_chars
   |> List.map (fun char ->
-         let char_locations = find_char_positions char in
-         let mapped_points =
-           create_ordered_pairs char_locations char_locations
-           |> List.concat_map (fun ((r1, c1), (r2, c2)) ->
-                  position_mapper grid_size (r1, c1) (r2, c2))
-         in
-         List.sort_uniq compare mapped_points)
+      let char_locations = find_char_positions char in
+      let mapped_points =
+        create_ordered_pairs char_locations char_locations
+        |> List.concat_map (fun ((r1, c1), (r2, c2)) ->
+            position_mapper grid_size (r1, c1) (r2, c2))
+      in
+      List.sort_uniq compare mapped_points)
   |> List.concat |> List.sort_uniq compare |> List.length
 
 (** [Part 1]: Consider first valid antinode position *)
@@ -90,5 +90,5 @@ let parse input =
   input |> String.split_on_char '\n'
   |> List.filter (fun line -> String.trim line <> "")
   |> List.map (fun row ->
-         Array.of_list (List.init (String.length row) (String.get row)))
+      Array.of_list (List.init (String.length row) (String.get row)))
   |> Array.of_list

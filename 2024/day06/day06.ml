@@ -160,5 +160,5 @@ let parse input =
   input |> String.split_on_char '\n'
   |> List.filter (fun s -> String.trim s <> "")
   |> List.map (fun row ->
-         Array.of_list (List.init (String.length row) (String.get row)))
+      Array.of_list (List.init (String.length row) (String.get row)))
   |> Array.of_list

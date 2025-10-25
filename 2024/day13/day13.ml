@@ -161,23 +161,23 @@ let parse input =
   input
   |> Str.split (Str.regexp "\n\n")
   |> List.map (fun machine_config ->
-         let lines =
-           machine_config
-           |> Str.split (Str.regexp "\n")
-           |> List.map String.trim
-           |> List.filter (fun s -> String.length s > 0)
-         in
-         match lines with
-         | [ button_a_line; button_b_line; prize_line ] ->
-             {
-               button_a = parse_button button_a_line "Button A";
-               button_b = parse_button button_b_line "Button B";
-               prize = parse_prize prize_line;
-             }
-         | _ ->
-             Printf.printf "\nDebug: Found %d lines in section: %s\n"
-               (List.length lines) machine_config;
-             failwith
-               (Printf.sprintf
-                  "Invalid machine configuration: Expected 3 lines, got %d"
-                  (List.length lines)))
+      let lines =
+        machine_config
+        |> Str.split (Str.regexp "\n")
+        |> List.map String.trim
+        |> List.filter (fun s -> String.length s > 0)
+      in
+      match lines with
+      | [ button_a_line; button_b_line; prize_line ] ->
+          {
+            button_a = parse_button button_a_line "Button A";
+            button_b = parse_button button_b_line "Button B";
+            prize = parse_prize prize_line;
+          }
+      | _ ->
+          Printf.printf "\nDebug: Found %d lines in section: %s\n"
+            (List.length lines) machine_config;
+          failwith
+            (Printf.sprintf
+               "Invalid machine configuration: Expected 3 lines, got %d"
+               (List.length lines)))

@@ -327,8 +327,8 @@ let parse input =
   let input =
     input
     |> String.map (function
-         | '\r' -> ' '
-         | c -> c)
+      | '\r' -> ' '
+      | c -> c)
     |> String.trim
   in
 
@@ -354,9 +354,9 @@ let parse input =
     register_lines
     |> List.find_opt (fun line -> String.starts_with ~prefix line)
     |> Option.map (fun line ->
-           String.sub line (String.length prefix)
-             (String.length line - String.length prefix)
-           |> String.trim |> Int64.of_string)
+        String.sub line (String.length prefix)
+          (String.length line - String.length prefix)
+        |> String.trim |> Int64.of_string)
     |> Option.value ~default:0L
   in
 

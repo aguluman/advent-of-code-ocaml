@@ -126,17 +126,17 @@ let get_numeric_button_route source_button target_button =
   | src, tgt
     when bottom_row_buttons
          |> List.map (fun bottom_button ->
-                List.map
-                  (fun left_button -> (bottom_button, left_button))
-                  left_col_buttons)
+             List.map
+               (fun left_button -> (bottom_button, left_button))
+               left_col_buttons)
          |> flatten
          |> List.mem (src, tgt) -> [ vertical_first ]
   | src, tgt
     when left_col_buttons
          |> List.map (fun left_button ->
-                List.map
-                  (fun bottom_button -> (left_button, bottom_button))
-                  bottom_row_buttons)
+             List.map
+               (fun bottom_button -> (left_button, bottom_button))
+               bottom_row_buttons)
          |> flatten
          |> List.mem (src, tgt) -> [ horizontal_first ]
   | _ -> List.sort_uniq compare [ vertical_first; horizontal_first ]
@@ -183,15 +183,15 @@ let get_direction_button_route source_button target_button =
   | src, tgt
     when top_row_buttons
          |> List.map (fun top_button ->
-                left_col_buttons
-                |> List.map (fun left_button -> (top_button, left_button)))
+             left_col_buttons
+             |> List.map (fun left_button -> (top_button, left_button)))
          |> flatten
          |> List.mem (src, tgt) -> [ vertical_first ]
   | src, tgt
     when left_col_buttons
          |> List.map (fun left_button ->
-                top_row_buttons
-                |> List.map (fun top_button -> (left_button, top_button)))
+             top_row_buttons
+             |> List.map (fun top_button -> (left_button, top_button)))
          |> flatten
          |> List.mem (src, tgt) -> [ horizontal_first ]
   | _ -> List.sort_uniq compare [ vertical_first; horizontal_first ]

@@ -50,19 +50,19 @@ let part1 (schematics : char array array list) =
   let locks =
     List.filter (fun s -> Array.for_all (( = ) '#') s.(0)) schematics
     |> List.map (fun s ->
-           Array.init w (fun j ->
-               Array.fold_left
-                 (fun acc i -> acc + if s.(i).(j) = '.' then 0 else 1)
-                 0 (Array.init h Fun.id)))
+        Array.init w (fun j ->
+            Array.fold_left
+              (fun acc i -> acc + if s.(i).(j) = '.' then 0 else 1)
+              0 (Array.init h Fun.id)))
   in
 
   let keys =
     List.filter (fun s -> Array.for_all (( = ) '.') s.(0)) schematics
     |> List.map (fun s ->
-           Array.init w (fun j ->
-               Array.fold_left
-                 (fun acc i -> acc + if s.(i).(j) = '.' then 0 else 1)
-                 0 (Array.init h Fun.id)))
+        Array.init w (fun j ->
+            Array.fold_left
+              (fun acc i -> acc + if s.(i).(j) = '.' then 0 else 1)
+              0 (Array.init h Fun.id)))
   in
 
   (* Count valid lock-key pairs using arrays instead of lists *)

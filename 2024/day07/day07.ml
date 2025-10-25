@@ -12,12 +12,12 @@ let part1 equations =
   in
   equations
   |> List.filter (fun (s, a) ->
-         let a = List.of_seq a in
-         let result =
-           collect_result (List.tl a) [ List.hd a ]
-           |> List.exists (fun x -> Int64.equal x s)
-         in
-         result)
+      let a = List.of_seq a in
+      let result =
+        collect_result (List.tl a) [ List.hd a ]
+        |> List.exists (fun x -> Int64.equal x s)
+      in
+      result)
   |> List.fold_left (fun acc (s, _) -> Int64.add acc s) Int64.zero
 
 let part2 equations =
@@ -37,19 +37,19 @@ let part2 equations =
   in
   equations
   |> List.filter (fun (s, a) ->
-         let a = List.of_seq a in
-         collect_result (List.tl a) [ List.hd a ]
-         |> List.exists (fun x -> Int64.equal x s))
+      let a = List.of_seq a in
+      collect_result (List.tl a) [ List.hd a ]
+      |> List.exists (fun x -> Int64.equal x s))
   |> List.fold_left (fun acc (s, _) -> Int64.add acc s) Int64.zero
 
 let parse input =
   String.split_on_char '\n' input
   |> List.filter (fun line -> String.trim line <> "")
   |> List.map (fun line ->
-         match String.split_on_char ':' line with
-         | [ num; values ] ->
-             ( Int64.of_string (String.trim num),
-               String.split_on_char ' ' (String.trim values)
-               |> List.filter (fun s -> String.trim s <> "")
-               |> List.map Int64.of_string |> List.to_seq )
-         | _ -> failwith ("Invalid input format: " ^ line))
+      match String.split_on_char ':' line with
+      | [ num; values ] ->
+          ( Int64.of_string (String.trim num),
+            String.split_on_char ' ' (String.trim values)
+            |> List.filter (fun s -> String.trim s <> "")
+            |> List.map Int64.of_string |> List.to_seq )
+      | _ -> failwith ("Invalid input format: " ^ line))

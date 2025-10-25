@@ -73,8 +73,8 @@ let part1 (robots, width, height) =
     robots
     |> List.map (simulate_movement 100 width height)
     |> List.filter_map (fun robot ->
-           let pos_x, pos_y = robot.position in
-           get_quadrant width height pos_x pos_y)
+        let pos_x, pos_y = robot.position in
+        get_quadrant width height pos_x pos_y)
   in
   List.fold_left
     (fun acc (_, count) -> acc * count)

@@ -35,7 +35,7 @@ let split_updates rules updates =
               let q_p =
                 Map.find following q
                 |> Option.value_map ~default:true ~f:(fun v ->
-                       not (Set.mem v p))
+                    not (Set.mem v p))
               in
               p_q && q_p))
     in
@@ -78,15 +78,14 @@ let parse input =
     String.split rules_block ~on:'\n'
     |> List.filter ~f:(fun s -> not (String.is_empty (String.strip s)))
     |> List.filter_map ~f:(fun line ->
-           try
-             let parts = String.split (String.strip line) ~on:'|' in
-             match parts with
-             | [ p; q ] ->
-                 Some
-                   ( Int.of_string (String.strip p),
-                     Int.of_string (String.strip q) )
-             | _ -> None
-           with _ -> None)
+        try
+          let parts = String.split (String.strip line) ~on:'|' in
+          match parts with
+          | [ p; q ] ->
+              Some
+                (Int.of_string (String.strip p), Int.of_string (String.strip q))
+          | _ -> None
+        with _ -> None)
   in
 
   (* Parse updates *)
@@ -94,9 +93,9 @@ let parse input =
     String.split updates_block ~on:'\n'
     |> List.filter ~f:(fun s -> not (String.is_empty (String.strip s)))
     |> List.map ~f:(fun line ->
-           String.split (String.strip line) ~on:','
-           |> List.filter_map ~f:(fun x ->
-                  try Some (Int.of_string (String.strip x)) with _ -> None))
+        String.split (String.strip line) ~on:','
+        |> List.filter_map ~f:(fun x ->
+            try Some (Int.of_string (String.strip x)) with _ -> None))
   in
 
   (rules, updates)
