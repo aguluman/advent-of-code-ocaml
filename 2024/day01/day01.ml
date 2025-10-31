@@ -3,11 +3,11 @@ module IntMap = Map.Make (Int)
 (* Parse function to convert string input to a list of integer pairs *)
 let parse input =
   String.split_on_char '\n' input
-  |> List.filter (fun s -> String.length s > 0)
+  |> List.filter (fun sentence -> String.length sentence > 0)
   |> List.map (fun line ->
       let parts =
-        String.split_on_char ' ' line
-        |> List.filter (fun s -> String.length s > 0)
+        line |> String.split_on_char ' '
+        |> List.filter (fun sentence -> String.length sentence > 0)
       in
       (int_of_string (List.nth parts 0), int_of_string (List.nth parts 1)))
 
