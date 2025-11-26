@@ -13,6 +13,31 @@ To get started with OCaml development:
 
 This project includes a comprehensive Makefile with various commands to help you build, test, and run solutions efficiently.
 
+### Year Selection
+
+How to Use It:
+
+`Auto-detection` (default): Run make or any target without specifying YEAR. It will use the latest year directory (e.g., 2025 if it exists).
+For example:
+
+```bash
+  make test → Runs tests for the latest year projects.
+  make run-day DAY=01 INPUT=download → Runs day 01 for the latest year.
+  make clean → Cleans build artifacts for the latest year.
+```
+
+`Manual selection`: Specify YEAR on the command line, e.g.:
+
+```bash
+  make YEAR=2024 test → Runs tests for 2024 projects.
+  make YEAR=2024 run-day DAY=01 INPUT=download → Runs day 01 for 2024.
+  make YEAR=2024 clean → Cleans build artifacts for 2024.
+```
+
+This works for all targets that use $(YEAR), such as test, run-day, run-release, submit, etc.
+
+If the specified year directory doesn't exist, the Makefile will error out, so ensure the directory is present.
+
 ### Testing
 
 ```bash
