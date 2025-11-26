@@ -1,7 +1,7 @@
 .PHONY: all test clean new-day run-day help benchmark-% fmt fmt-% run-release run-current download check-status submit run-submit
 
 # Default target
-all: test
+all: help
 
 # Variables
 YEAR := $(shell if ls -d [0-9][0-9][0-9][0-9] >/dev/null 2>&1; then \
