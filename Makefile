@@ -117,7 +117,7 @@ new-day:
 		echo "Copied .ocamlformat from day01"; \
 	else \
 		echo "No .ocamlformat found, creating default one"; \
-		echo 'profile = default\nversion = 0.27.0\ntype-decl = sparse\nbreak-cases = fit-or-vertical\ndoc-comments = before' > "$(YEAR)/day$$day/.ocamlformat"; \
+		echo 'profile = default\nversion = 0.28.1\ntype-decl = sparse\nbreak-cases = fit-or-vertical\ndoc-comments = before' > "$(YEAR)/day$$day/.ocamlformat"; \
 	fi; \
 	\
 	# Fetch problem title from AOC website \
