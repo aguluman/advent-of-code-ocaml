@@ -221,9 +221,10 @@ If you don't have Nix or prefer containerized development:
 
 # Start an interactive container (recommended)
   docker compose run --rm aoc-ocaml
+```
+#### Set up your `AUTH_TOKEN` as described in the [Configuration](#configuration) section
 
-# Set up your `AUTH_TOKEN` as described in the [Configuration](#configuration) section
-
+```bash
 # Inside the container, you can run all the same Makefile commands:
 # Run `make` to see all available commands
   make
