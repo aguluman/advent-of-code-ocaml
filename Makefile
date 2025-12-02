@@ -471,42 +471,39 @@ submit:
 	fi; \
 	\
 	ANSWER_FILE="answers/$(YEAR)/submit_day$(DAY).txt"; \
-	if [ ! -f "$$ANSWER_FILE" ]; then \
-		echo "No answers file found at $$ANSWER_FILE"; \
-		echo "Running solution to generate answers..."; \
-		if [ ! -f "inputs/$(YEAR)/day$(DAY).txt" ]; then \
-			echo "Input file not found. Downloading..."; \
-			$(MAKE) download DAY=$(DAY); \
+	echo "Running solution to generate/update answers..."; \
+	if [ ! -f "inputs/$(YEAR)/day$(DAY).txt" ]; then \
+		echo "Input file not found. Downloading..."; \
+		$(MAKE) download DAY=$(DAY); \
+	fi; \
+	INPUT_PATH="$(PWD)/inputs/$(YEAR)/day$(DAY).txt"; \
+	echo "Building day$(DAY) in release mode..."; \
+	cd $(YEAR)/day$(DAY) && dune build --profile release && cd ../../; \
+	echo "Running day$(DAY) with input $$INPUT_PATH..."; \
+	if OUTPUT=$$(cd $(YEAR)/day$(DAY) && cat "$$INPUT_PATH" | dune exec --profile release ./test.exe 2>&1); then \
+		echo "$$OUTPUT"; \
+		PART1=$$(echo "$$OUTPUT" | grep "Part 1:" | cut -d':' -f2 | tr -d ' '); \
+		PART2=$$(echo "$$OUTPUT" | grep "Part 2:" | cut -d':' -f2 | tr -d ' '); \
+		mkdir -p answers/$(YEAR); \
+		if [ ! -z "$$PART1" ]; then \
+			echo "Part1: $$PART1" > "$$ANSWER_FILE"; \
 		fi; \
-		INPUT_PATH="$(PWD)/inputs/$(YEAR)/day$(DAY).txt"; \
-		echo "Building day$(DAY) in release mode..."; \
-		cd $(YEAR)/day$(DAY) && dune build --profile release && cd ../../; \
-		echo "Running day$(DAY) with input $$INPUT_PATH..."; \
-		if OUTPUT=$$(cd $(YEAR)/day$(DAY) && cat "$$INPUT_PATH" | dune exec --profile release ./test.exe 2>&1); then \
-			echo "$$OUTPUT"; \
-			PART1=$$(echo "$$OUTPUT" | grep "Part 1:" | cut -d':' -f2 | tr -d ' '); \
-			PART2=$$(echo "$$OUTPUT" | grep "Part 2:" | cut -d':' -f2 | tr -d ' '); \
-			mkdir -p answers/$(YEAR); \
-			if [ ! -z "$$PART1" ]; then \
-				echo "Part1: $$PART1" > "$$ANSWER_FILE"; \
-			fi; \
-			if [ ! -z "$$PART2" ]; then \
-				echo "Part2: $$PART2" >> "$$ANSWER_FILE"; \
-			fi; \
-			if [ -f "$$ANSWER_FILE" ]; then \
-				echo "Answers saved to $$ANSWER_FILE"; \
-			else \
-				echo "Failed to save answers - no valid output found"; \
-				exit 1; \
-			fi; \
+		if [ ! -z "$$PART2" ]; then \
+			echo "Part2: $$PART2" >> "$$ANSWER_FILE"; \
+		fi; \
+		if [ -f "$$ANSWER_FILE" ]; then \
+			echo "Answers saved to $$ANSWER_FILE"; \
 		else \
-			echo "Solution failed to run:"; \
-			echo "$$OUTPUT"; \
-			echo ""; \
-			echo "Please fix your solution before submitting."; \
-			echo "You can run: make run-day DAY=$(DAY) INPUT=download"; \
+			echo "Failed to save answers - no valid output found"; \
 			exit 1; \
 		fi; \
+	else \
+		echo "Solution failed to run:"; \
+		echo "$$OUTPUT"; \
+		echo ""; \
+		echo "Please fix your solution before submitting."; \
+		echo "You can run: make run-day DAY=$(DAY) INPUT=download"; \
+		exit 1; \
 	fi; \
 	\
 	if [ ! -f "$$ANSWER_FILE" ]; then \
