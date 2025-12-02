@@ -246,7 +246,7 @@ If you don't have Nix or prefer containerized development:
   docker compose run --rm aoc-ocaml
 
 # Stop and clean up
-docker compose down
+  docker compose down
 ```
 
 #### What Happens When You Run `docker compose run --rm aoc-ocaml`?
