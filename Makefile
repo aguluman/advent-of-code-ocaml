@@ -100,6 +100,7 @@ clean:
 # Create a new day from template
 new-day:
 	@read -p "Enter day number (e.g., 04): " day; \
+	DAY_NUM=$$(echo $$day | sed 's/^0*//'); \
 	if [ -d "$(YEAR)/day$$day" ]; then \
 		echo "$(YEAR)/day$$day already exists!"; \
 		exit 1; \
@@ -152,6 +153,8 @@ new-day:
 		sed -i "s/\[Problem Title\]/Problem Title/g" "$(YEAR)/day$$day/day_template.ml"; \
 		sed -i "s/\[YEAR\]/$(YEAR)/g" "$(YEAR)/day$$day/day_template.ml"; \
 	fi; \
+	# Ensure URL uses unpadded day number for single-digit days \
+	sed -i "s|/day/$$day|/day/$$DAY_NUM|g" "$(YEAR)/day$$day/day_template.ml"; \
 	\
 	# Update module names in the files \
 	sed -i "s/day_template/day$$day/g" "$(YEAR)/day$$day/dune"; \
