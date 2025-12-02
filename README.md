@@ -1,10 +1,10 @@
 # Advent of Code - OCaml Solutions
 
-[Advent of Code 2024](https://adventofcode.com/2024) using OCaml
+[Advent of Code](https://adventofcode.com) using OCaml
 
 ## Getting Started
 
-To get started with OCaml development:
+To get started with OCaml development locally:
 
 - Install Opam using this link: [Opam Installation Guide per OS](https://opam.ocaml.org/doc/Install.html)
 - Follow the guidelines on this page to setup OCaml: [OCaml By Example](https://o1-labs.github.io/ocamlbyexample/basics-opam.html)
@@ -152,7 +152,7 @@ See how this project eliminates all manual steps between solving and submitting 
 For manual execution without using the Makefile commands, navigate to the specific day directory first:
 
 ```bash
-cd 2024/day01
+  cd 2024/day01
 ```
 
 Then use the appropriate command for your operating system:
@@ -206,6 +206,54 @@ nix develop
 echo "use flake" > .envrc
 direnv allow
 ```
+
+### With Docker (Alternative for Non-Nix Users)
+If you don't have Nix or prefer containerized development:
+
+#### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+
+#### Quick Start
+```bash
+# Build the Docker image
+  docker compose build
+
+# Start an interactive container (recommended)
+  docker compose run --rm aoc-ocaml
+
+# Set up your `AUTH_TOKEN` as described in the [Configuration](#configuration) section
+
+# Inside the container, you can run all the same Makefile commands:
+# Run `make` to see all available commands
+  make
+
+# Create a new day (interactive, auto-fetches problem title)
+  make new-day
+
+# Inside the container, you can run all the same Makefile commands:
+  make test
+  make run-day DAY=01 INPUT=download
+```
+
+#### Docker Commands
+```bash
+# Build image
+  docker compose build
+
+# Run container interactively (recommended for development)
+  docker compose run --rm aoc-ocaml
+
+# Stop and clean up
+docker compose down
+```
+
+#### What Happens When You Run `docker compose run --rm aoc-ocaml`?
+- Starts the container with your project files mounted
+- Puts you in `/app` (the working directory) with all your files
+- Gives you a Bash prompt to work with OCaml and your project
+- Container is removed when you exit due to (`--rm` flag)
+- All Makefile commands work exactly like local development
 
 ## Notes
 

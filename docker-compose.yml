@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  aoc-ocaml:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: advent-of-code-ocaml
+    volumes:
+      - .:/app
+      - /app/_build  # Exclude build artifacts from volume
+    working_dir: /app
+    environment:
+      - AOC_YEAR=2025
+    command: bash
+    stdin_open: true
+    tty: true
