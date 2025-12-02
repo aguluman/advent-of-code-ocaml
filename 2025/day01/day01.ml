@@ -7,7 +7,7 @@
     - {b Part 2:} [Description of part 2]
 
     See details at:
-    {{:https://adventofcode.com/2025/day/01} Advent of Code 2025, Day 01} *)
+    {{:https://adventofcode.com/2025/day/1} Advent of Code 2025, Day 01} *)
 
 type quadrant =
   | TopLeft  (** Positions 26-50 *)
