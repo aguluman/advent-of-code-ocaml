@@ -45,16 +45,14 @@ let is_invalid id =
     @return Solution for part 1 *)
 let part1 input =
   let ranges = parse input in
+  let rec sum_range acc id finish =
+    if id > finish then acc
+    else
+      let acc' = if is_invalid id then acc + id else acc in
+      sum_range acc' (id + 1) finish
+  in
   List.fold_left
-    (fun acc (start, finish) ->
-      let range_sum =
-        List.fold_left
-          (fun inner_acc id ->
-            if is_invalid id then Int.add inner_acc id else inner_acc)
-          0
-          (List.init (finish - start + 1) (fun i -> start + i))
-      in
-      Int.add acc range_sum)
+    (fun acc (start, finish) -> acc + sum_range 0 start finish)
     0 ranges
 
 let is_invalid_part2 id =
