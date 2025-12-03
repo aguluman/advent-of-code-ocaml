@@ -223,7 +223,6 @@ Once inside `nix develop`, you have access to all Makefile commands:
 ```
 
 #### Running Solutions with Nix
-**Important**: When using `nix run` directly, input must be piped via stdin:
 ```bash
 # First download the input (pickes the recent year automatically)
   make download DAY=02
