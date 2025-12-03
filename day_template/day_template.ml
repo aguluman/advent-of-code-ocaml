@@ -10,32 +10,28 @@
 *)
 
 (** Helper function to parse input string into a structured data format
-    
+
     @param input Raw input string from the puzzle
-    @return Parsed data structure
-*)
+    @return Parsed data structure *)
 let parse input =
-  input
-  |> String.split_on_char '\n'
+  input |> String.split_on_char '\n'
   |> List.filter (fun line -> String.trim line <> "")
   |> List.map String.trim
-  (* TODO: Add specific parsing logic here *)
+(* TODO: Add specific parsing logic here *)
 
 (** [part1 input] solves part 1 of the challenge
-    
+
     @param input Raw input string from the puzzle
-    @return Solution for part 1
-*)
+    @return Solution for part 1 *)
 let part1 input =
   let data = parse input in
   (* TODO: Implement part 1 solution *)
   0
 
 (** [part2 input] solves part 2 of the challenge
-    
+
     @param input Raw input string from the puzzle
-    @return Solution for part 2
-*)
+    @return Solution for part 2 *)
 let part2 input =
   let data = parse input in
   (* TODO: Implement part 2 solution *)
