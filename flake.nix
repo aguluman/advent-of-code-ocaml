@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        
+
         # OCaml development dependencies
         ocamlPackages = with pkgs.ocamlPackages; [
           dune_3
@@ -32,53 +32,64 @@
         ];
 
         # Auto-detect years like your Makefile does
-        availableYears = 
+        availableYears =
           let
             allEntries = builtins.readDir ./.;
-            yearDirs = builtins.filter 
+            yearDirs = builtins.filter
               (name: builtins.match "[0-9][0-9][0-9][0-9]" name != null)
               (builtins.attrNames allEntries);
           in
-          builtins.sort (a: b: a > b) yearDirs;  # Sort newest first like Makefile
+          builtins.sort (a: b: a > b) yearDirs; # Sort newest first like Makefile
 
         # Get the current/latest year (like YEAR variable in Makefile)
-        currentYear = if builtins.length availableYears > 0 
-                     then builtins.head availableYears 
-                     else "2024";  # Fallback
+        currentYear =
+          if builtins.length availableYears > 0
+          then builtins.head availableYears
+          else "2024"; # Fallback
 
         # Function to build a single day's solution
-        buildDay = year: day: 
+        buildDay = year: day:
           let
             dayPath = "${year}/${day}";
             dayExists = builtins.pathExists ./${dayPath};
           in
           if dayExists then
-            pkgs.stdenv.mkDerivation {
-              pname = "aoc-${year}-${day}";
-              version = "0.1.0";
-              src = ./${dayPath};
-              
-              nativeBuildInputs = [ pkgs.ocaml pkgs.dune_3 ] ++ ocamlPackages;
-              
-              buildPhase = ''
-                runHook preBuild
-                dune build --profile release
-                runHook postBuild
-              '';
-              
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out/bin
-                dune install --prefix $out --profile release
-                runHook postInstall
-              '';
-              
-              meta = with pkgs.lib; {
-                description = "Advent of Code ${year} Day ${day} solution";
-                license = licenses.mit;
-                platforms = platforms.unix;
-              };
-            }
+            pkgs.stdenv.mkDerivation
+              {
+                pname = "aoc-${year}-${day}";
+                version = "0.1.0";
+                src = ./${dayPath};
+
+                nativeBuildInputs = [ pkgs.ocaml pkgs.dune_3 ];
+
+                buildInputs = with pkgs.ocamlPackages; [
+                  base
+                  stdio
+                  ounit2
+                  findlib
+                ];
+
+                buildPhase = ''
+                  runHook preBuild
+                  dune build --profile release
+                  runHook postBuild
+                '';
+
+                installPhase = ''
+                  runHook preInstall
+                  mkdir -p $out/bin
+                  if [ -d "_build/default" ]; then
+                    find _build/default -maxdepth 1 -type f -executable -exec cp {} $out/bin/ \;
+                  fi
+                  runHook postInstall
+                '';
+
+                meta = with pkgs.lib; {
+                  description = "Advent of Code ${year} Day ${day} solution";
+                  license = licenses.mit;
+                  platforms = platforms.unix;
+                };
+              }
           else null;
 
         # Function to get all days for a given year
@@ -87,48 +98,57 @@
             yearPath = ./${year};
             yearExists = builtins.pathExists yearPath;
           in
-          if yearExists then 
+          if yearExists then
             builtins.filter (name: builtins.match "day[0-9][0-9]" name != null)
               (builtins.attrNames (builtins.readDir yearPath))
-          else [];
+          else [ ];
 
         # Function to build all days for a year
         buildYear = year:
           let
             days = getDaysForYear year;
             dayPackages = builtins.listToAttrs (
-              map (day: {
-                name = "${year}-${day}";
-                value = buildDay year day;
-              }) days
+              map
+                (day: {
+                  name = "${year}-${day}";
+                  value = buildDay year day;
+                })
+                days
             );
           in
-          if days != [] then
-            pkgs.symlinkJoin {
-              name = "aoc-${year}-all";
-              paths = builtins.filter (pkg: pkg != null) (builtins.attrValues dayPackages);
-              meta.description = "All Advent of Code ${year} solutions";
-            }
+          if days != [ ] then
+            pkgs.symlinkJoin
+              {
+                name = "aoc-${year}-all";
+                paths = builtins.filter (pkg: pkg != null) (builtins.attrValues dayPackages);
+                meta.description = "All Advent of Code ${year} solutions";
+              }
           else null;
 
         # Generate packages for all years and days
         yearPackages = builtins.listToAttrs (
-          map (year: {
-            name = "all-${year}";
-            value = buildYear year;
-          }) availableYears
+          map
+            (year: {
+              name = "all-${year}";
+              value = buildYear year;
+            })
+            availableYears
         );
 
         # Individual day packages for all years
         dayPackages = builtins.listToAttrs (
           pkgs.lib.flatten (
-            map (year:
-              let days = getDaysForYear year; in
-              map (day: {
-                name = "${day}-${year}";
-                value = buildDay year day;
-              }) days
-            ) availableYears
+            map
+              (year:
+                let days = getDaysForYear year; in
+                map
+                  (day: {
+                    name = "${day}-${year}";
+                    value = buildDay year day;
+                  })
+                  days
+              )
+              availableYears
           )
         );
 
@@ -136,32 +156,49 @@
         dayApps = builtins.listToAttrs (
           builtins.filter (x: x != null) (
             pkgs.lib.flatten (
-              map (year:
-                let days = getDaysForYear year; in
-                map (day: 
-                  let dayPkg = buildDay year day; in
-                  if dayPkg != null then {
-                    name = "${day}-${year}";
-                    value = {
-                      type = "app";
-                      program = "${dayPkg}/bin/${day}";
-                      meta = {
-                        description = "Run Advent of Code ${year} ${day}";
-                      };
-                    };
-                  } else null
-                ) days
-              ) availableYears
+              map
+                (year:
+                  let days = getDaysForYear year; in
+                  map
+                    (day:
+                      let dayPkg = buildDay year day; in
+                      if dayPkg != null then {
+                        name = "${day}-${year}";
+                        value = {
+                          type = "app";
+                          program = "${dayPkg}/bin/${day}";
+                          meta = {
+                            description = "Run Advent of Code ${year} ${day}";
+                          };
+                        };
+                      } else null
+                    )
+                    days
+                )
+                availableYears
             )
           )
         );
 
-      in {
+      in
+      {
         # Development shell
         devShells.default = pkgs.mkShell {
-          buildInputs = buildTools ++ ocamlPackages;
-          
+          buildInputs = buildTools ++ ocamlPackages ++ [ pkgs.glibcLocales ];
+
+          # Fix locale warnings - set these as environment variables
+          env = {
+            LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
+            LC_ALL = "en_NG.UTF-8";
+            LANG = "en_NG.UTF-8";
+          };
+
           shellHook = ''
+            # Ensure locale is set before any output
+            export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
+            export LC_ALL="en_NG.UTF-8"
+            export LANG="en_NG.UTF-8"
+            
             echo "🐪 Advent of Code - OCaml Development Environment 🐪"
             echo "NixOS: $(nixos-version 2>/dev/null || echo 'Not on NixOS')"
             echo "OCaml: $(ocaml -version)"
@@ -172,7 +209,7 @@
             echo "Total days available: ${toString (builtins.length (builtins.attrNames dayPackages))}"
             echo ""
             echo "Available commands:"
-            echo "  make run DAY=XX           - Run specific day"
+            echo "  make run-day DAY=XX       - Run specific day"
             echo "  make run-release DAY=XX   - Run in release mode"
             echo "  make test DAY=XX          - Run tests"
             echo "  nix build .#day01-${currentYear}    - Build specific day"
@@ -191,43 +228,47 @@
         # All packages
         packages = yearPackages // dayPackages // {
           # Default package - current year or all years
-          default = if yearPackages ? "all-${currentYear}" then
-            yearPackages."all-${currentYear}"
-          else if yearPackages != {} then
-            pkgs.symlinkJoin {
-              name = "aoc-all-years";
-              paths = builtins.filter (pkg: pkg != null) (builtins.attrValues yearPackages);
-              meta.description = "All Advent of Code solutions across all years";
-            }
-          else 
-            pkgs.writeText "aoc-placeholder" "No solutions built yet";
+          default =
+            if yearPackages ? "all-${currentYear}" then
+              yearPackages."all-${currentYear}"
+            else if yearPackages != { } then
+              pkgs.symlinkJoin
+                {
+                  name = "aoc-all-years";
+                  paths = builtins.filter (pkg: pkg != null) (builtins.attrValues yearPackages);
+                  meta.description = "All Advent of Code solutions across all years";
+                }
+            else
+              pkgs.writeText "aoc-placeholder" "No solutions built yet";
         };
 
         # Apps for easy running with `nix run`
         apps = dayApps // {
-          default = if dayApps != {} then
-            let
-              currentYearDays = builtins.filter 
-                (name: pkgs.lib.hasSuffix currentYear name) 
-                (builtins.attrNames dayApps);
-              sortedDays = builtins.sort (a: b: a > b) currentYearDays;
-              selectedApp = if builtins.length sortedDays > 0 then
-                builtins.head sortedDays
-              else
-                builtins.head (builtins.attrNames dayApps);
-            in
-            dayApps.${selectedApp} // {
-              meta = { description = "Run the most recent Advent of Code solution"; };
-            }
-          else {
-            type = "app";
-            program = "${pkgs.writeShellScriptBin "aoc-help" ''
+          default =
+            if dayApps != { } then
+              let
+                currentYearDays = builtins.filter
+                  (name: pkgs.lib.hasSuffix currentYear name)
+                  (builtins.attrNames dayApps);
+                sortedDays = builtins.sort (a: b: a > b) currentYearDays;
+                selectedApp =
+                  if builtins.length sortedDays > 0 then
+                    builtins.head sortedDays
+                  else
+                    builtins.head (builtins.attrNames dayApps);
+              in
+              dayApps.${selectedApp} // {
+                meta = { description = "Run the most recent Advent of Code solution"; };
+              }
+            else {
+              type = "app";
+              program = "${pkgs.writeShellScriptBin "aoc-help" ''
               echo "No Advent of Code solutions available yet!"
               echo "Available years: ${toString availableYears}"
               echo "Create some days first, then run with: nix run .#day01-${currentYear}"
             ''}/bin/aoc-help";
-            meta = { description = "Advent of Code help"; };
-          };
+              meta = { description = "Advent of Code help"; };
+            };
         };
 
         # Formatter for `nix fmt`
@@ -237,17 +278,18 @@
         checks = {
           # Check that the flake builds
           build-test = self.packages.${system}.default;
-          
+
           # Check formatting
-          format-check = pkgs.runCommand "format-check" {
-            nativeBuildInputs = [ pkgs.nixpkgs-fmt ];
-          } ''
+          format-check = pkgs.runCommand "format-check"
+            {
+              nativeBuildInputs = [ pkgs.nixpkgs-fmt ];
+            } ''
             nixpkgs-fmt --check ${./flake.nix}
             touch $out
           '';
 
           # Verify year detection works
-          year-detection-test = pkgs.runCommand "year-detection-test" {} ''
+          year-detection-test = pkgs.runCommand "year-detection-test" { } ''
             echo "Detected years: ${toString availableYears}"
             echo "Current year: ${currentYear}"
             ${if builtins.length availableYears > 0 
