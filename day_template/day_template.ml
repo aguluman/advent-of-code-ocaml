@@ -24,7 +24,7 @@ let parse input =
     @param input Raw input string from the puzzle
     @return Solution for part 1 *)
 let part1 input =
-  let data = parse input in
+  let _ = parse input in
   (* TODO: Implement part 1 solution *)
   0
 
@@ -33,6 +33,6 @@ let part1 input =
     @param input Raw input string from the puzzle
     @return Solution for part 2 *)
 let part2 input =
-  let data = parse input in
+  let _ = parse input in
   (* TODO: Implement part 2 solution *)
   0L
