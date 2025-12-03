@@ -696,9 +696,20 @@ flake-build:
 	nix build .#day$(DAY)-$(YEAR)
 
 flake-run:
-	nix run .#day$(DAY)-$(YEAR)
+	@if [ -z "$(DAY)" ]; then \
+		echo "Please specify a day number using DAY=XX"; \
+		exit 1; \
+	fi; \
+	INPUT_FILE="inputs/$(YEAR)/day$(DAY).txt"; \
+	if [ ! -f "$$INPUT_FILE" ]; then \
+		echo "Input file not found: $$INPUT_FILE"; \
+		echo "You can download it with: make download DAY=$(DAY)"; \
+		exit 1; \
+	fi; \
+	echo "Running day$(DAY)-$(YEAR) with input $$INPUT_FILE..."; \
+	cat "$$INPUT_FILE" | nix run .#day$(DAY)-$(YEAR)
 
-flake-dev:
+flake:
 	nix develop
 
 flake-update:
@@ -730,14 +741,14 @@ help:
 	@echo "  make run-submit DAY=XX INPUT=download     : Download input, run day XX, and prompt to submit"
 	@echo ""
 	@echo "Flake Commands (Nix 2.4+ with flakes enabled):"
-	@echo "  make flake-dev                                : Enter flake development shell"
+	@echo "  make flake                                    : Enter flake development shell"
 	@echo "  make flake-build DAY=XX                       : Build specific day with flakes (uses current year)"
-	@echo "  make flake-run DAY=XX                         : Run specific day with flakes (uses current year)"
+	@echo "  make flake-run DAY=XX                         : Run specific day with input from inputs/YEAR/dayXX.txt"
 	@echo "  make flake-update                             : Update flake dependencies"
 	@echo "  nix flake show                                : Show all available packages"
 	@echo "  nix build .#day01-2024                        : Build day01 of 2024"
 	@echo "  nix build .#all-2024                          : Build all 2024 solutions"
-	@echo "  nix run .#day01-2025                          : Run day01 of 2025"
+	@echo "  cat input.txt | nix run .#day01-2025          : Run day01 of 2025 with piped input"
 	@echo ""
 	@echo "  make help                                     : Show this help message"
 	@echo ""

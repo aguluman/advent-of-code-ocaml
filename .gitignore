@@ -39,3 +39,6 @@ Thumbs.db
 
 #Inputs and Answers files
 **/*.txt
+
+# Nix Build directory (nix build)
+/result

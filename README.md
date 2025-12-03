@@ -198,13 +198,54 @@ You can find your session token by:
 ## Development Setup
 
 ### With Nix Flakes (Recommended)
+
+Nix provides a fully reproducible development environment with all dependencies pre-configured.
+
+#### Prerequisites
+- [Nix](https://nixos.org/download.html) (version 2.4+ with flakes enabled)
+- Add to `/etc/nix/nix.conf`: `experimental-features = nix-command flakes`
+
+#### Quick Start
 ```bash
 # Enter development environment
-nix develop
+nix develop or make flake
 
-# Or with direnv (auto-loads when entering directory)
-echo "use flake" > .envrc
+# Or with direnv (auto-loads environment when entering directory)
 direnv allow
+```
+
+#### Available Commands in Nix Shell
+Once inside `nix develop`, you have access to all Makefile commands:
+```bash
+  make test-01                           # Run tests for day01
+  make run-day DAY=01 INPUT=download     # Run with downloaded input
+  make new-day                           # Create new day from template
+```
+
+#### Running Solutions with Nix
+**Important**: When using `nix run` directly, input must be piped via stdin:
+```bash
+# First download the input (pickes the recent year automatically)
+  make download DAY=02
+
+# Then run as
+  nix run .#day02-2025
+  nix run .#day01-2024
+```
+
+#### Nix Flake Commands
+```bash
+# Build a specific day
+  nix build .#day01-2025
+
+# Build all solutions for a year
+  nix build .#all-2024
+
+# View available packages
+  nix flake show
+
+# Update dependencies
+  nix flake update
 ```
 
 ### With Docker (Alternative for Non-Nix Users)

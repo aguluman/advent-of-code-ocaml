@@ -158,7 +158,7 @@
           )
         );
 
-        # Create apps for all year/day combinations
+        # Create apps for all year/day combinations with automatic input piping
         dayApps = builtins.listToAttrs (
           builtins.filter (x: x != null) (
             pkgs.lib.flatten (
@@ -167,14 +167,36 @@
                   let days = getDaysForYear year; in
                   map
                     (day:
-                      let dayPkg = buildDay year day; in
+                      let
+                        dayPkg = buildDay year day;
+                        # Create a wrapper script that automatically pipes input
+                        dayNum = builtins.substring 3 2 day; # Extract "01" from "day01"
+                        wrapper = pkgs.writeShellScriptBin "${day}-${year}" ''
+                          INPUT_FILE="inputs/${year}/${day}.txt"
+                          if [ -f "$INPUT_FILE" ]; then
+                            cat "$INPUT_FILE" | ${dayPkg}/bin/${day}
+                          elif [ -f "inputs/${year}/day${dayNum}.txt" ]; then
+                            cat "inputs/${year}/day${dayNum}.txt" | ${dayPkg}/bin/${day}
+                          elif [ ! -t 0 ]; then
+                            # Input is being piped, use it directly
+                            ${dayPkg}/bin/${day}
+                          else
+                            echo "No input file found at $INPUT_FILE"
+                            echo "Either:"
+                            echo "  1. Run from the project root directory"
+                            echo "  2. Download input: make download DAY=${dayNum}"
+                            echo "  3. Pipe input manually: cat input.txt | nix run .#${day}-${year}"
+                            exit 1
+                          fi
+                        '';
+                      in
                       if dayPkg != null then {
                         name = "${day}-${year}";
                         value = {
                           type = "app";
-                          program = "${dayPkg}/bin/${day}";
+                          program = "${wrapper}/bin/${day}-${year}";
                           meta = {
-                            description = "Run Advent of Code ${year} ${day}";
+                            description = "Run Advent of Code ${year} ${day} (auto-pipes input)";
                           };
                         };
                       } else null
@@ -215,14 +237,13 @@
             echo "Total days available: ${toString (builtins.length (builtins.attrNames dayPackages))}"
             echo ""
             echo "Available commands:"
-            echo "  make run-day DAY=XX INPUT=download        - Run specific day with input"
+            echo "  make download DAY=XX                      - Download specific day input"
             echo "  make run-release DAY=XX INPUT=download    - Run in release mode"
             echo "  make test-XX                              - Run tests for day XX (e.g., test-01)"
-            echo "  make flake-build DAY=XX                   - Build specific day with Nix"
             echo ""
-            echo "Nix run (requires piping input):"
-            echo "  cat inputs/${currentYear}/dayXX.txt | nix run .#dayXX-${currentYear}"
-            echo "  Example: cat inputs/${currentYear}/day01.txt | nix run .#day01-${currentYear}"
+            echo "Nix run (auto-pipes input from inputs/${currentYear}/dayXX.txt):"
+            echo "  nix run .#dayXX-${currentYear}            - Run from project root"
+            echo "  Example: nix run .#day01-${currentYear}"
             echo ""
             echo "Flake commands:"
             echo "  nix flake update          - Update dependencies"
