@@ -12,6 +12,7 @@
     {2 Optimization Notes:}
     - Uses integer math instead of string operations (no allocations)
     - Generates invalid IDs directly instead of enumerating all IDs in range
+    - Avoids closure allocations in hot paths
     - O(digit_lengths) instead of O(range_size)
 
     See details at:
@@ -19,20 +20,16 @@
 
 (** {1 Utility Functions} *)
 
-(** Compute 10^n efficiently using tail recursion *)
-let pow10 n =
-  let rec loop acc = function
-    | 0 -> acc
-    | n -> loop (acc * 10) (n - 1)
-  in
-  if n < 0 then 0 else loop 1 n
+(** Compute 10^n efficiently — no closure, tail recursive *)
+let rec pow10_aux acc n = if n <= 0 then acc else pow10_aux (acc * 10) (n - 1)
 
-(** Count digits in n without string conversion *)
-let digits n =
-  let rec loop count p10 =
-    if n < p10 then count else loop (count + 1) (p10 * 10)
-  in
-  if n = 0 then 1 else loop 1 10
+let pow10 n = if n < 0 then 0 else pow10_aux 1 n
+
+(** Count digits in n — no closure, direct recursion *)
+let rec digits_aux count p10 n =
+  if n < p10 then count else digits_aux (count + 1) (p10 * 10) n
+
+let digits n = if n = 0 then 1 else digits_aux 1 10 n
 
 (** {1 Parsing} *)
 
@@ -56,121 +53,121 @@ let parse input =
 
 (** {1 Part 1: Exactly Twice Repeats} *)
 
-(** Check if id is invalid (repeated exactly twice) using only math. E.g., 1234
-    -> left=12, right=34, check 12=34? No. 1212 -> left=12, right=12, check
-    12=12? Yes. *)
-let is_invalid_math id =
-  let len = digits id in
-  if len mod 2 <> 0 then false
-  else
-    let half = len / 2 in
-    let divisor = pow10 half in
-    let left = id / divisor in
-    let right = id mod divisor in
-    left = right
-
 (** Construct an invalid ID from its "half" value. E.g., half=12 with 2 digits
     -> 12 * 100 + 12 = 1212 *)
 let make_invalid half =
   let d = digits half in
   (half * pow10 d) + half
 
-(** Sum all invalid IDs (exactly twice) in range [low, high] without
-    enumeration. Iterates over possible digit counts (2, 4, 6, ...) and computes
-    which "half" values produce invalid IDs within the range. *)
+(** Find lowest half where make_invalid half >= low *)
+let rec find_low half half_high low =
+  if half > half_high then half
+  else if make_invalid half >= low then half
+  else find_low (half + 1) half_high low
+
+(** Find highest half where make_invalid half <= high *)
+let rec find_high half half_low high =
+  if half < half_low then half
+  else if make_invalid half <= high then half
+  else find_high (half - 1) half_low high
+
+(** Sum halves from half_low to half_high, each contributing half * multiplier
+*)
+let rec sum_halves half half_high multiplier total =
+  if half > half_high then total
+  else sum_halves (half + 1) half_high multiplier (total + (half * multiplier))
+
+(** Sum all invalid IDs (exactly twice) in range [low, high] *)
 let sum_invalid_part1 (low, high) =
   let rec sum_for_digits d acc =
-    if d > 20 then acc (* Max ~20 digits for int *)
+    if d > 20 then acc
     else
       let half_digits = d / 2 in
-      let min_half = if half_digits = 1 then 1 else pow10 (half_digits - 1) in
-      let max_half = pow10 half_digits - 1 in
+      let p10_half = pow10 half_digits in
+      let p10_half_minus1 = pow10 (half_digits - 1) in
+      let min_half = if half_digits = 1 then 1 else p10_half_minus1 in
+      let max_half = p10_half - 1 in
       let id_min = make_invalid min_half in
       let id_max = make_invalid max_half in
-      (* Skip this digit count if no overlap with range *)
       if id_max < low || id_min > high then sum_for_digits (d + 2) acc
       else
-        (* Find the half values that produce IDs in [low, high] *)
-        let half_low = max min_half ((low / pow10 half_digits) - 1) in
-        let half_high = min max_half ((high / pow10 half_digits) + 1) in
-        (* Refine bounds by checking actual IDs *)
-        let rec find_low h =
-          if h > half_high then h
-          else if make_invalid h >= low then h
-          else find_low (h + 1)
-        in
-        let rec find_high h =
-          if h < half_low then h
-          else if make_invalid h <= high then h
-          else find_high (h - 1)
-        in
-        let half_low = find_low half_low in
-        let half_high = find_high half_high in
+        let half_low = max min_half ((low / p10_half) - 1) in
+        let half_high = min max_half ((high / p10_half) + 1) in
+        let half_low = find_low half_low half_high low in
+        let half_high = find_high half_high half_low high in
         if half_low > half_high then sum_for_digits (d + 2) acc
         else
-          (* Sum: each half h contributes h * (10^half_digits + 1) *)
-          let multiplier = pow10 half_digits + 1 in
-          let rec sum_halves h total =
-            if h > half_high then total
-            else sum_halves (h + 1) (total + (h * multiplier))
-          in
-          sum_for_digits (d + 2) (acc + sum_halves half_low 0)
+          let multiplier = p10_half + 1 in
+          let range_sum = sum_halves half_low half_high multiplier 0 in
+          sum_for_digits (d + 2) (acc + range_sum)
   in
   sum_for_digits 2 0
 
-(** [part1 input] solves part 1 — O(ranges × digit_counts) *)
+(** [part1 input] solves part 1 of the challenge
+
+    @param input Raw input string from the puzzle
+    @return Solution for part 1 *)
 let part1 input =
   let ranges = parse input in
   List.fold_left (fun acc range -> acc + sum_invalid_part1 range) 0 ranges
 
 (** {1 Part 2: At Least Twice Repeats} *)
 
-(** Construct an ID from a unit repeated n times. E.g., unit=12 (2 digits), n=3
-    -> 121212 *)
-let repeat_unit unit n =
-  let d = digits unit in
-  let rec loop acc remaining =
-    if remaining = 0 then acc else loop ((acc * pow10 d) + unit) (remaining - 1)
-  in
-  loop 0 n
+(** Construct an ID from a unit repeated n times — no closure *)
+let rec repeat_unit_aux acc unit p10_unit remaining =
+  if remaining = 0 then acc
+  else repeat_unit_aux ((acc * p10_unit) + unit) unit p10_unit (remaining - 1)
 
-(** Collect all invalid IDs (at least twice) in range [low, high]. Uses a Set to
-    avoid duplicates (e.g., 222222 = 2×3 = 22×3 = 222×2). *)
+let repeat_unit unit n =
+  let p10_unit = pow10 (digits unit) in
+  repeat_unit_aux 0 unit p10_unit n
+
+(** Collect units into set — no closure *)
+let rec collect_units u max_unit n low high add_fn acc =
+  if u > max_unit then acc
+  else
+    let id = repeat_unit u n in
+    if id > high then acc
+    else if id >= low then
+      collect_units (u + 1) max_unit n low high add_fn (add_fn id acc)
+    else collect_units (u + 1) max_unit n low high add_fn acc
+
+(** Collect for unit digits — no closure *)
+let rec collect_for_unit_digits ud n dhigh low high add_fn acc =
+  if ud < 1 then acc
+  else
+    let total_digits = ud * n in
+    if total_digits > dhigh then
+      collect_for_unit_digits (ud - 1) n dhigh low high add_fn acc
+    else
+      let min_unit = if ud = 1 then 1 else pow10 (ud - 1) in
+      let max_unit = pow10 ud - 1 in
+      let acc = collect_units min_unit max_unit n low high add_fn acc in
+      collect_for_unit_digits (ud - 1) n dhigh low high add_fn acc
+
+(** Collect for repeats — no closure *)
+let rec collect_for_repeats n dhigh low high add_fn acc =
+  if n > dhigh then acc
+  else
+    let max_unit_digits = dhigh / n in
+    let acc =
+      collect_for_unit_digits max_unit_digits n dhigh low high add_fn acc
+    in
+    collect_for_repeats (n + 1) dhigh low high add_fn acc
+
+(** Collect all invalid IDs (at least twice) in range [low, high] *)
 let collect_invalid_part2 (low, high) =
   let module ISet = Set.Make (Int) in
   let dhigh = digits high in
-  let rec collect_for_repeats n acc =
-    if n > dhigh then acc
-    else
-      (* For n repeats, unit can have 1 to dhigh/n digits *)
-      let max_unit_digits = dhigh / n in
-      let rec collect_for_unit_digits ud acc =
-        if ud < 1 then acc
-        else
-          let total_digits = ud * n in
-          if total_digits > dhigh then collect_for_unit_digits (ud - 1) acc
-          else
-            let min_unit = if ud = 1 then 1 else pow10 (ud - 1) in
-            let max_unit = pow10 ud - 1 in
-            let rec collect_units u acc =
-              if u > max_unit then acc
-              else
-                let id = repeat_unit u n in
-                if id > high then acc
-                else if id >= low then collect_units (u + 1) (ISet.add id acc)
-                else collect_units (u + 1) acc
-            in
-            collect_for_unit_digits (ud - 1) (collect_units min_unit acc)
-      in
-      collect_for_repeats (n + 1) (collect_for_unit_digits max_unit_digits acc)
-  in
-  collect_for_repeats 2 ISet.empty
+  collect_for_repeats 2 dhigh low high ISet.add ISet.empty
 
-(** [part2 input] solves part 2 — O(ranges × invalid_ids_in_range) *)
+(** [part2 input] solves part 2 of the challenge
+
+    @param input Raw input string from the puzzle
+    @return Solution for part 2 *)
 let part2 input =
   let ranges = parse input in
   let module ISet = Set.Make (Int) in
-  (* Collect all invalid IDs across all ranges, avoiding duplicates *)
   let all_invalid =
     List.fold_left
       (fun acc range -> ISet.union acc (collect_invalid_part2 range))
