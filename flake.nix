@@ -78,8 +78,14 @@
                 installPhase = ''
                   runHook preInstall
                   mkdir -p $out/bin
-                  if [ -d "_build/default" ]; then
-                    find _build/default -maxdepth 1 -type f -executable -exec cp {} $out/bin/ \;
+                  # Copy the test.exe executable and rename it to the day name
+                  if [ -f "_build/default/test.exe" ]; then
+                    cp _build/default/test.exe $out/bin/${day}
+                  elif [ -f "_build/default/${day}.exe" ]; then
+                    cp _build/default/${day}.exe $out/bin/${day}
+                  else
+                    echo "Warning: No executable found in _build/default/"
+                    ls -la _build/default/ || true
                   fi
                   runHook postInstall
                 '';
@@ -209,11 +215,14 @@
             echo "Total days available: ${toString (builtins.length (builtins.attrNames dayPackages))}"
             echo ""
             echo "Available commands:"
-            echo "  make run-day DAY=XX       - Run specific day"
-            echo "  make run-release DAY=XX   - Run in release mode"
-            echo "  make test DAY=XX          - Run tests"
-            echo "  nix build .#day01-${currentYear}    - Build specific day"
-            echo "  nix run .#day01-${currentYear}      - Run specific day"
+            echo "  make run-day DAY=XX INPUT=download        - Run specific day with input"
+            echo "  make run-release DAY=XX INPUT=download    - Run in release mode"
+            echo "  make test-XX                              - Run tests for day XX (e.g., test-01)"
+            echo "  make flake-build DAY=XX                   - Build specific day with Nix"
+            echo ""
+            echo "Nix run (requires piping input):"
+            echo "  cat inputs/${currentYear}/dayXX.txt | nix run .#dayXX-${currentYear}"
+            echo "  Example: cat inputs/${currentYear}/day01.txt | nix run .#day01-${currentYear}"
             echo ""
             echo "Flake commands:"
             echo "  nix flake update          - Update dependencies"
