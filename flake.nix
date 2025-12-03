@@ -18,12 +18,8 @@
           base
           stdio
           ounit2
-          str
           ocamlformat
-          odoc
-          merlin
           ocaml-lsp
-          utop
         ];
 
         # Build tools and utilities
