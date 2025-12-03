@@ -27,8 +27,6 @@ RUN opam init --disable-sandboxing --yes && \
         ounit2 \
         base \
         stdio \
-        utop \
-        merlin \
         ocaml-lsp-server
 
 # Set PATH to include the correct switch
