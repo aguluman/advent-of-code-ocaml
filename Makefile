@@ -425,7 +425,7 @@ check-status:
 		echo "Part 2: Not completed"; \
 	fi
 
-# Submit an answer (improved)
+# Submit an answer
 submit:
 	@if [ -z "$(DAY)" ]; then \
 		echo "Please specify a day with DAY=XX"; \
