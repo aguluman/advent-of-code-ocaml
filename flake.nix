@@ -1,4 +1,3 @@
-# flake.nix
 {
   description = "Advent of Code solutions in OCaml - Multi-year competitive programming project";
 
@@ -135,20 +134,25 @@
 
         # Create apps for all year/day combinations
         dayApps = builtins.listToAttrs (
-          pkgs.lib.flatten (
-            map (year:
-              let days = getDaysForYear year; in
-              map (day: 
-                let dayPkg = buildDay year day; in
-                if dayPkg != null then {
-                  name = "${day}-${year}";
-                  value = flake-utils.lib.mkApp {
-                    drv = dayPkg;
-                    name = day;
-                  };
-                } else null
-              ) days
-            ) availableYears
+          builtins.filter (x: x != null) (
+            pkgs.lib.flatten (
+              map (year:
+                let days = getDaysForYear year; in
+                map (day: 
+                  let dayPkg = buildDay year day; in
+                  if dayPkg != null then {
+                    name = "${day}-${year}";
+                    value = {
+                      type = "app";
+                      program = "${dayPkg}/bin/${day}";
+                      meta = {
+                        description = "Run Advent of Code ${year} ${day}";
+                      };
+                    };
+                  } else null
+                ) days
+              ) availableYears
+            )
           )
         );
 
@@ -202,25 +206,28 @@
         # Apps for easy running with `nix run`
         apps = dayApps // {
           default = if dayApps != {} then
-            # Default to the most recent day of the current year
             let
               currentYearDays = builtins.filter 
                 (name: pkgs.lib.hasSuffix currentYear name) 
                 (builtins.attrNames dayApps);
               sortedDays = builtins.sort (a: b: a > b) currentYearDays;
+              selectedApp = if builtins.length sortedDays > 0 then
+                builtins.head sortedDays
+              else
+                builtins.head (builtins.attrNames dayApps);
             in
-            if builtins.length sortedDays > 0 then
-              dayApps.${builtins.head sortedDays}
-            else
-              (builtins.head (builtins.attrValues dayApps))
-          else 
-            flake-utils.lib.mkApp {
-              drv = pkgs.writeShellScriptBin "aoc-help" ''
-                echo "No Advent of Code solutions available yet!"
-                echo "Available years: ${toString availableYears}"
-                echo "Create some days first, then run with: nix run .#day01-${currentYear}"
-              '';
-            };
+            dayApps.${selectedApp} // {
+              meta = { description = "Run the most recent Advent of Code solution"; };
+            }
+          else {
+            type = "app";
+            program = "${pkgs.writeShellScriptBin "aoc-help" ''
+              echo "No Advent of Code solutions available yet!"
+              echo "Available years: ${toString availableYears}"
+              echo "Create some days first, then run with: nix run .#day01-${currentYear}"
+            ''}/bin/aoc-help";
+            meta = { description = "Advent of Code help"; };
+          };
         };
 
         # Formatter for `nix fmt`
