@@ -16,7 +16,6 @@
 let parse input =
   input |> String.split_on_char '\n'
   |> List.filter (fun line -> String.trim line <> "")
-  |> List.map String.trim
 (* TODO: Add specific parsing logic here *)
 
 (** [part1 input] solves part 1 of the challenge
