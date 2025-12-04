@@ -3,120 +3,83 @@
     [Brief description of the problem and what this module solves]
 
     {2 Problem Summary:}
-    - {b Part 1:} [Description of part 1]
-    - {b Part 2:} [Description of part 2]
+    - {b Part 1:} Count times dial lands exactly on 0
+    - {b Part 2:} Count total zero crossings during rotations
 
     See details at:
     {{:https://adventofcode.com/2025/day/1} Advent of Code 2025, Day 01} *)
 
-type quadrant =
-  | TopLeft  (** Positions 26-50 *)
-  | BottomLeft  (** Positions 0-25 *)
-  | BottomRight  (** Positions 75-99 *)
-  | TopRight  (** Positions 51-74 *)
+(** Positive modulo - handles negative numbers correctly *)
+let[@inline] pmod a b =
+  let m = a mod b in
+  if m < 0 then m + b else m
 
-type dial = {
-  position : int;
-  quadrant : quadrant;
-}
-
-type direction =
-  | Left
-  | Right
-
-type rotation = {
-  dir : direction;
-  amount : int;
-}
-
-let get_quadrant pos =
-  if pos >= 26 && pos <= 50 then TopLeft
-  else if pos >= 0 && pos <= 25 then BottomLeft
-  else if pos >= 75 && pos <= 99 then BottomRight
-  else TopRight
-
-let make_dial position = { position; quadrant = get_quadrant position }
-
-let parse_rotation s =
-  let s = String.trim s in
-  if String.length s < 2 then None
-  else
-    let dir_char = s.[0] in
-    let amount_str = String.sub s 1 (String.length s - 1) in
-    match dir_char with
-    | 'L' ->
-        Option.map
-          (fun amount -> { dir = Left; amount })
-          (int_of_string_opt amount_str)
-    | 'R' ->
-        Option.map
-          (fun amount -> { dir = Right; amount })
-          (int_of_string_opt amount_str)
-    | _ -> None
-
-(** Helper function to parse input string into a structured data format
-
-    @param input Raw input string from the puzzle
-    @return Parsed data structure *)
-let parse input =
-  input |> String.split_on_char '\n'
-  |> List.filter (fun line -> String.trim line <> "")
-  |> List.filter_map parse_rotation
-
-let rotate dial rotation =
-  let delta =
-    match rotation.dir with
-    | Left -> -rotation.amount (* -ve for left *)
-    | Right -> rotation.amount (* +ve for right*)
+(** Process input directly, calling [f] for each parsed rotation. Returns final
+    accumulator. Avoids all intermediate list allocations. *)
+let fold_rotations input init f =
+  let len = String.length input in
+  let rec skip_whitespace i =
+    if i >= len then i
+    else
+      match String.unsafe_get input i with
+      | ' ' | '\t' | '\n' | '\r' -> skip_whitespace (i + 1)
+      | _ -> i
   in
-  let new_pos = (dial.position + delta) mod 100 in
-  let new_pos = if new_pos < 0 then new_pos + 100 else new_pos in
-  make_dial new_pos
+  let rec parse_int acc i =
+    if i >= len then (acc, i)
+    else
+      match String.unsafe_get input i with
+      | '0' .. '9' as c -> parse_int ((acc * 10) + Char.code c - 48) (i + 1)
+      | _ -> (acc, i)
+  in
+  let rec loop acc i =
+    let i = skip_whitespace i in
+    if i >= len then acc
+    else
+      let dir = String.unsafe_get input i in
+      if dir <> 'L' && dir <> 'R' then loop acc (i + 1)
+      else
+        let amount, next_i = parse_int 0 (i + 1) in
+        if amount = 0 then loop acc next_i
+        else
+          let delta = if dir = 'R' then amount else -amount in
+          loop (f acc delta) next_i
+  in
+  loop init 0
 
 (** [part1 input] solves part 1 of the challenge
 
     @param input Raw input string from the puzzle
-    @return Number of times dial pointed to 0 *)
+    @return Solution for part 1 *)
 let part1 input =
-  let rotations = parse input in
-  let starting_dial = make_dial 50 in
-
-  let _, zero_count =
-    List.fold_left
-      (fun (current_dial, count) rotation ->
-        let new_dial = rotate current_dial rotation in
-        let new_count = if new_dial.position = 0 then count + 1 else count in
-        (new_dial, new_count))
-      (starting_dial, 0) rotations
+  let zeros, _ =
+    fold_rotations input (0, 50) (fun (zeros, pos) delta ->
+        let pos' = pmod (pos + delta) 100 in
+        let zeros' = if pos' = 0 then zeros + 1 else zeros in
+        (zeros', pos'))
   in
-  zero_count
-
-let count_zero_crossings start rotation =
-  match rotation.dir with
-  | Left ->
-      if start = 0 then rotation.amount / 100
-      else if rotation.amount < start then 0
-      else ((rotation.amount - start) / 100) + 1
-  | Right ->
-      let distance_to_zero = 100 - start in
-      if start = 0 then rotation.amount / 100
-      else if rotation.amount < distance_to_zero then 0
-      else ((rotation.amount - distance_to_zero) / 100) + 1
+  zeros
 
 (** [part2 input] solves part 2 of the challenge
 
     @param input Raw input string from the puzzle
-    @return Total Count of 0 pointings *)
+    @return Solution for part 2 *)
 let part2 input =
-  let rotations = parse input in
-  let starting_dial = make_dial 50 in
-
-  let _, total_zeros =
-    List.fold_left
-      (fun (current_dial, count) rotation ->
-        let crossings = count_zero_crossings current_dial.position rotation in
-        let new_dial = rotate current_dial rotation in
-        (new_dial, count + crossings))
-      (starting_dial, 0) rotations
+  let total, _ =
+    fold_rotations input (0, 50) (fun (total, pos) delta ->
+        let pos' = pmod (pos + delta) 100 in
+        (* Count crossings (not landing) *)
+        let crossings =
+          if
+            pos <> 0 && pos' <> 0
+            && ((delta < 0 && pos' >= pos) || (delta > 0 && pos' <= pos))
+          then 1
+          else 0
+        in
+        (* Count full loops *)
+        let full_loops = (abs delta - 1) / 100 in
+        (* Count landing on 0 *)
+        let landing = if pos' = 0 then 1 else 0 in
+        (total + crossings + full_loops + landing, pos'))
   in
-  Int64.of_int total_zeros
+  total

@@ -12,13 +12,13 @@ let make_part1_test name expected_output input =
 (** Helper function to create test cases for part2 *)
 let make_part2_test name expected_output input =
   name >:: fun _ ->
-  assert_equal expected_output (part2 input) ~printer:Int64.to_string
+  assert_equal expected_output (part2 input) ~printer:string_of_int
 
 (** Part 1 test cases *)
 let part1_tests = [ make_part1_test "example_part1" 3 example_input ]
 
 (** Part 2 test cases *)
-let part2_tests = [ make_part2_test "example_part2" 6L example_input ]
+let part2_tests = [ make_part2_test "example_part2" 6 example_input ]
 
 (** Complete test suite *)
 let suite =
@@ -45,7 +45,7 @@ let () =
         let timer_start = Unix.gettimeofday () in
 
         input |> part1 |> Printf.printf "Part 1: %d\n%!";
-        input |> part2 |> Printf.printf "Part 2: %Ld\n%!";
+        input |> part2 |> Printf.printf "Part 2: %d\n%!";
 
         Unix.gettimeofday () -. timer_start
         |> Printf.printf "Elapsed time: %.4f seconds\n%!")
