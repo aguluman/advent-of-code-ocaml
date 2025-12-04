@@ -1,5 +1,5 @@
 (executable
- (name test)
+ (name test_template)
  (libraries base stdio ounit2)
  (ocamlopt_flags
   (:standard -O3)))
