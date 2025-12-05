@@ -9,12 +9,6 @@
     - {b Part 2:} Sum IDs made of a sequence repeated at least twice (e.g.,
       123123123)
 
-    {2 Optimization Notes:}
-    - Uses integer math instead of string operations (no allocations)
-    - Generates invalid IDs directly instead of enumerating all IDs in range
-    - Avoids closure allocations in hot paths
-    - O(digit_lengths) instead of O(range_size)
-
     See details at:
     {{:https://adventofcode.com/2025/day/2} Advent of Code 2025, Day 02} *)
 
@@ -53,26 +47,20 @@ let parse input =
 
 (** {1 Part 1: Exactly Twice Repeats} *)
 
-(** Construct an invalid ID from its "half" value. E.g., half=12 with 2 digits
-    -> 12 * 100 + 12 = 1212 *)
 let make_invalid half =
   let d = digits half in
   (half * pow10 d) + half
 
-(** Find lowest half where make_invalid half >= low *)
 let rec find_low half half_high low =
   if half > half_high then half
   else if make_invalid half >= low then half
   else find_low (half + 1) half_high low
 
-(** Find highest half where make_invalid half <= high *)
 let rec find_high half half_low high =
   if half < half_low then half
   else if make_invalid half <= high then half
   else find_high (half - 1) half_low high
 
-(** Sum halves from half_low to half_high, each contributing half * multiplier
-*)
 let rec sum_halves half half_high multiplier total =
   if half > half_high then total
   else sum_halves (half + 1) half_high multiplier (total + (half * multiplier))
@@ -113,7 +101,6 @@ let part1 input =
 
 (** {1 Part 2: At Least Twice Repeats} *)
 
-(** Construct an ID from a unit repeated n times — no closure *)
 let rec repeat_unit_aux acc unit p10_unit remaining =
   if remaining = 0 then acc
   else repeat_unit_aux ((acc * p10_unit) + unit) unit p10_unit (remaining - 1)
@@ -122,7 +109,6 @@ let repeat_unit unit n =
   let p10_unit = pow10 (digits unit) in
   repeat_unit_aux 0 unit p10_unit n
 
-(** Collect units into set — no closure *)
 let rec collect_units u max_unit n low high add_fn acc =
   if u > max_unit then acc
   else
@@ -132,7 +118,6 @@ let rec collect_units u max_unit n low high add_fn acc =
       collect_units (u + 1) max_unit n low high add_fn (add_fn id acc)
     else collect_units (u + 1) max_unit n low high add_fn acc
 
-(** Collect for unit digits — no closure *)
 let rec collect_for_unit_digits ud n dhigh low high add_fn acc =
   if ud < 1 then acc
   else
@@ -145,7 +130,6 @@ let rec collect_for_unit_digits ud n dhigh low high add_fn acc =
       let acc = collect_units min_unit max_unit n low high add_fn acc in
       collect_for_unit_digits (ud - 1) n dhigh low high add_fn acc
 
-(** Collect for repeats — no closure *)
 let rec collect_for_repeats n dhigh low high add_fn acc =
   if n > dhigh then acc
   else
@@ -155,7 +139,6 @@ let rec collect_for_repeats n dhigh low high add_fn acc =
     in
     collect_for_repeats (n + 1) dhigh low high add_fn acc
 
-(** Collect all invalid IDs (at least twice) in range [low, high] *)
 let collect_invalid_part2 (low, high) =
   let module ISet = Set.Make (Int) in
   let dhigh = digits high in
