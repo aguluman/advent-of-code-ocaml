@@ -83,6 +83,9 @@ type gate = {
 (** String map module for efficient lookups *)
 module StringMap = Map.Make (String)
 
+(* Add a StringSet module after StringMap *)
+module StringSet = Set.Make (String)
+
 (** Solves Part 1 by simulating the circuit and calculating the decimal value
     from the binary outputs on z-wires.
 
@@ -190,11 +193,15 @@ let part2 (_wires, gates) =
       StringMap.empty gates
   in
 
-  (* Optimized loop detection using hashtable for visited tracking *)
+  (* Pre-compute z-wire names to avoid Printf.sprintf in loops *)
+  let z_names = Array.init 46 (fun i -> Printf.sprintf "z%02d" i) in
+  let x_names = Array.init 46 (fun i -> Printf.sprintf "x%02d" i) in
+  let y_names = Array.init 46 (fun i -> Printf.sprintf "y%02d" i) in
+
   let has_loop gate_by_out =
     let visited = Hashtbl.create 64 in
     let rec dfs out path =
-      if List.mem out path then true
+      if StringSet.mem out path then true
       else if Hashtbl.mem visited out then false
       else (
         Hashtbl.add visited out true;
@@ -202,45 +209,57 @@ let part2 (_wires, gates) =
         | None -> false
         | Some gate ->
             let left, right = gate.input in
-            dfs left (out :: path) || dfs right (out :: path))
+            let path' = StringSet.add out path in
+            dfs left path' || dfs right path')
     in
     StringMap.exists
       (fun out _ ->
         Hashtbl.clear visited;
-        dfs out [])
+        dfs out StringSet.empty)
       gate_by_out
   in
 
-  (* Collect all wires in the subcircuit for a given output *)
   let rec collect out gate_by_out =
     match StringMap.find_opt out gate_by_out with
     | None -> []
     | Some gate ->
         let left, right = gate.input in
-        (out :: collect left gate_by_out) @ collect right gate_by_out
+        out :: (collect left gate_by_out @ collect right gate_by_out)
   in
 
-  (* Build canonical string representation of circuit *)
-  let rec make out gate_by_out =
+  (* Use Buffer for efficient string building *)
+  let rec make_buf buf out gate_by_out =
     match StringMap.find_opt out gate_by_out with
-    | None -> out
-    | Some gate -> (
-        let left = make (fst gate.input) gate_by_out in
-        let right = make (snd gate.input) gate_by_out in
+    | None -> Buffer.add_string buf out
+    | Some gate ->
+        let left_buf = Buffer.create 64 in
+        let right_buf = Buffer.create 64 in
+        make_buf left_buf (fst gate.input) gate_by_out;
+        make_buf right_buf (snd gate.input) gate_by_out;
+        let left = Buffer.contents left_buf in
+        let right = Buffer.contents right_buf in
         let left, right =
           if left <= right then (left, right) else (right, left)
         in
-        match gate.operation with
-        | And -> "(" ^ left ^ ")and(" ^ right ^ ")"
-        | Or -> "(" ^ left ^ ")or(" ^ right ^ ")"
-        | Xor -> "(" ^ left ^ ")xor(" ^ right ^ ")")
+        Buffer.add_char buf '(';
+        Buffer.add_string buf left;
+        (match gate.operation with
+        | And -> Buffer.add_string buf ")and("
+        | Or -> Buffer.add_string buf ")or("
+        | Xor -> Buffer.add_string buf ")xor(");
+        Buffer.add_string buf right;
+        Buffer.add_char buf ')'
   in
 
-  (* Pre-compiled regex patterns *)
+  let make out gate_by_out =
+    let buf = Buffer.create 256 in
+    make_buf buf out gate_by_out;
+    Buffer.contents buf
+  in
+
   let xy_regex = Str.regexp "[xy][0-9]+" in
   let op_regex = Str.regexp "\\(and\\|or\\|xor\\)" in
 
-  (* Optimized regex extraction *)
   let extract_matches regex circuit =
     let rec find_all pos acc =
       try
@@ -252,7 +271,6 @@ let part2 (_wires, gates) =
     find_all 0 []
   in
 
-  (* Efficient chunking *)
   let chunk_by_size size lst =
     let rec chunk acc current count = function
       | [] ->
@@ -265,85 +283,73 @@ let part2 (_wires, gates) =
     chunk [] [] 0 lst
   in
 
-  (* Validate if a z-wire circuit matches expected binary adder pattern *)
+  let valid_cache = Hashtbl.create 256 in
+
   let valid out gate_by_out =
     let circuit = make out gate_by_out in
-
-    (* validXY function *)
-    let valid_xy =
-      let xy_matches = extract_matches xy_regex circuit in
-      let xy_chunks = chunk_by_size 2 xy_matches in
-      match xy_chunks with
-      | [] -> true
-      | [ "x00"; "y00" ] :: t ->
-          (* After chunking by 2, we get pairs, then chunk those pairs by 2 again *)
-          let t_rechunked = chunk_by_size 2 t in
-          let n = List.length t_rechunked in
-          let rec validate_sequence i =
-            if i > n then true
-            else if i < n then
-              (* Let xy = [| $"x%02d{i}"; $"y%02d{i}" |] *)
-              let expected_pair =
-                [ Printf.sprintf "x%02d" i; Printf.sprintf "y%02d" i ]
+    match Hashtbl.find_opt valid_cache circuit with
+    | Some result -> result
+    | None ->
+        let xy_matches = extract_matches xy_regex circuit in
+        let xy_chunks = chunk_by_size 2 xy_matches in
+        let valid_xy =
+          match xy_chunks with
+          | [] -> true
+          | [ "x00"; "y00" ] :: t ->
+              let t_rechunked = chunk_by_size 2 t in
+              let t_arr = Array.of_list t_rechunked in
+              let n = Array.length t_arr in
+              let rec validate_sequence i =
+                if i > n then true
+                else if i < n then
+                  let expected_pair = [ x_names.(i); y_names.(i) ] in
+                  let expected_chunk = [ expected_pair; expected_pair ] in
+                  (if i > 0 && i <= n then t_arr.(i - 1) = expected_chunk
+                   else false)
+                  && validate_sequence (i + 1)
+                else if i = n then
+                  let expected_pair = [ x_names.(i); y_names.(i) ] in
+                  let expected_chunk = [ expected_pair ] in
+                  if i > 0 && i <= n then t_arr.(i - 1) = expected_chunk
+                  else false
+                else true
               in
-              (* t[i - 1] = List.replicate 2 xy means the chunk should be [xy; xy] *)
-              let expected_chunk = [ expected_pair; expected_pair ] in
-              (if i > 0 && i <= List.length t_rechunked then
-                 let chunk = List.nth t_rechunked (i - 1) in
-                 chunk = expected_chunk
-               else false)
-              && validate_sequence (i + 1)
-            else if i = n then
-              (* Last element: t[i - 1] = [ xy ] *)
-              let expected_pair =
-                [ Printf.sprintf "x%02d" i; Printf.sprintf "y%02d" i ]
+              validate_sequence 1
+          | _ -> false
+        in
+        let valid_operations =
+          let ops = extract_matches op_regex circuit in
+          match ops with
+          | [] -> true
+          | [ "xor" ] -> true
+          | "and" :: t ->
+              let t_arr = Array.of_list (chunk_by_size 4 t) in
+              let n = Array.length t_arr in
+              let rec validate_chunks i =
+                if i >= n then true
+                else
+                  let chunk = t_arr.(i) in
+                  if i + 1 < n then
+                    chunk = [ "and"; "xor"; "or"; "and" ]
+                    && validate_chunks (i + 1)
+                  else chunk = [ "xor"; "xor" ] && validate_chunks (i + 1)
               in
-              let expected_chunk = [ expected_pair ] in
-              if i > 0 && i <= List.length t_rechunked then
-                let chunk = List.nth t_rechunked (i - 1) in
-                chunk = expected_chunk
-              else false
-            else true
-          in
-          validate_sequence 1
-      | _ -> false
-    in
-
-    (* validOperation function *)
-    let valid_operations =
-      let ops = extract_matches op_regex circuit in
-      match ops with
-      | [] -> true
-      | [ "xor" ] -> true (* i = 0 case *)
-      | "and" :: t ->
-          let t_chunks = chunk_by_size 4 t in
-          let n = List.length t_chunks in
-          let rec validate_chunks i =
-            if i >= n then true
-            else
-              let chunk = List.nth t_chunks i in
-              if i + 1 < n then
-                chunk = [ "and"; "xor"; "or"; "and" ] && validate_chunks (i + 1)
-              else chunk = [ "xor"; "xor" ] && validate_chunks (i + 1)
-          in
-          validate_chunks 0
-      | _ -> false
-    in
-
-    valid_xy && valid_operations
+              validate_chunks 0
+          | _ -> false
+        in
+        let result = valid_xy && valid_operations in
+        Hashtbl.add valid_cache circuit result;
+        result
   in
 
-  (* Main search function with aggressive optimizations *)
   let rec search i gate_by_out =
     if i >= 45 then Some gate_by_out
     else
-      let out = Printf.sprintf "z%02d" i in
+      let out = z_names.(i) in
       if valid out gate_by_out then search (i + 1) gate_by_out
       else
         let swaps = collect out gate_by_out in
         let gate_bindings = StringMap.bindings gate_by_out in
-
-        (* Sort gate bindings to try more promising swaps first *)
         let sorted_bindings =
           List.sort (fun (a, _) (b, _) -> String.compare a b) gate_bindings
         in
@@ -362,17 +368,12 @@ let part2 (_wires, gates) =
                         |> StringMap.add swap_out target_gate
                         |> StringMap.add target_out current_gate
                       in
-                      (* Quick loop check first - fail fast *)
                       if has_loop new_gate_by_out then
                         try_pick_targets rest_targets
                       else
-                        (* More efficient validation check *)
                         let rec find_next_invalid j =
-                          if j > 45 then 46 (* No invalid found *)
-                          else if
-                            not
-                              (valid (Printf.sprintf "z%02d" j) new_gate_by_out)
-                          then j
+                          if j > 45 then 46
+                          else if not (valid z_names.(j) new_gate_by_out) then j
                           else find_next_invalid (j + 1)
                         in
                         let next_invalid = find_next_invalid 0 in
@@ -387,14 +388,12 @@ let part2 (_wires, gates) =
         try_pick_swaps swaps
   in
 
-  (* Find the correct gate mapping *)
   let correct_gate_by_out =
     match search 0 gate_by_out with
     | Some result -> result
     | None -> failwith "No solution found"
   in
 
-  (* Find the differences between original and corrected mappings *)
   let diff_wires =
     StringMap.fold
       (fun out original_gate acc ->
