@@ -32,7 +32,7 @@ let compute (nums, op) =
 
     @param input Raw input string from the puzzle
     @return List of problems, where each problem is (numbers list, operator) *)
-let parse input =
+let parse_part1 input =
   let lines =
     input |> String.split_on_char '\n'
     |> List.filter (fun line -> String.trim line <> "")
@@ -65,6 +65,17 @@ let parse input =
       in
       (nums, op))
     ops
+
+(** [part1 input] solves part 1 of the challenge
+
+    @param input Raw input string from the puzzle
+    @return Grand total of all problem results *)
+let part1 input =
+  let problems = parse_part1 input in
+
+  let results = List.map compute problems in
+
+  List.fold_left ( + ) 0 results
 
 (** Parse input for Part 2: column-wise traversal right-to-left, concatenate
     digits vertically
@@ -104,17 +115,6 @@ let parse_part2 input =
       | None -> traverse (x - 1) res []
   in
   traverse (w - 1) 0 []
-
-(** [part1 input] solves part 1 of the challenge
-
-    @param input Raw input string from the puzzle
-    @return Grand total of all problem results *)
-let part1 input =
-  let problems = parse input in
-
-  let results = List.map compute problems in
-
-  List.fold_left ( + ) 0 results
 
 (** [part2 input] solves part 2 of the challenge
 
