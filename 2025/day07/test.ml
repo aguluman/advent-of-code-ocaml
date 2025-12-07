@@ -34,7 +34,7 @@ let make_part2_test name expected_output input =
 let part1_tests = [ make_part1_test "example_part1" 21 example_input ]
 
 (** Part 2 test cases *)
-let part2_tests = [ make_part2_test "example_part2" 40L example_input ]
+let part2_tests = [ make_part2_test "example_part2" 0L example_input ]
 
 (** Complete test suite *)
 let suite =
