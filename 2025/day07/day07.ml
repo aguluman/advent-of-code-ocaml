@@ -19,15 +19,16 @@ let parse input =
   in
   let grid_arr =
     Array.of_list
-      (List.map (fun s -> Array.init (String.length s) (fun i -> s.[i])) lines)
+      (List.map (fun s -> Array.init (String.length s) (String.get s)) lines)
   in
   let height = Array.length grid_arr in
   let width = if height > 0 then Array.length grid_arr.(0) else 0 in
   let start_r, start_c =
     let found = ref None in
     for r = 0 to height - 1 do
+      let row = Array.unsafe_get grid_arr r in
       for c = 0 to width - 1 do
-        if grid_arr.(r).(c) = 'S' then found := Some (r, c)
+        if Array.unsafe_get row c = 'S' then found := Some (r, c)
       done
     done;
     match !found with
@@ -36,46 +37,44 @@ let parse input =
   in
   (grid_arr, height, width, start_r, start_c)
 
-let rec bfs grid_arr height width visited queue count =
-  if Queue.is_empty queue then count
-  else
+let bfs grid_arr height width visited queue =
+  let count = ref 0 in
+  while not (Queue.is_empty queue) do
     let r, c = Queue.take queue in
-    if r < 0 || r >= height || c < 0 || c >= width || visited.(r).(c) then
-      bfs grid_arr height width visited queue count
-    else begin
-      visited.(r).(c) <- true;
-      let cell = grid_arr.(r).(c) in
+    if
+      r >= 0 && r < height && c >= 0 && c < width
+      && not (Array.unsafe_get (Array.unsafe_get visited r) c)
+    then begin
+      Array.unsafe_set (Array.unsafe_get visited r) c true;
+      let cell = Array.unsafe_get (Array.unsafe_get grid_arr r) c in
       if cell = '^' then begin
         Queue.add (r + 1, c - 1) queue;
         Queue.add (r + 1, c + 1) queue;
-        bfs grid_arr height width visited queue (count + 1)
+        incr count
       end
-      else if cell = '.' || cell = 'S' then begin
-        Queue.add (r + 1, c) queue;
-        bfs grid_arr height width visited queue count
-      end
-      else bfs grid_arr height width visited queue count
+      else if cell = '.' || cell = 'S' then Queue.add (r + 1, c) queue
     end
+  done;
+  !count
 
 let count_paths grid_arr height width =
-  let memo = Hashtbl.create 10000 in
+  let memo = Array.make_matrix height width None in
 
   let rec dfs r c =
     if c < 0 || c >= width || r >= height then 1L
     else if r < 0 then 0L
     else
-      match Hashtbl.find_opt memo (r, c) with
+      match Array.unsafe_get (Array.unsafe_get memo r) c with
       | Some cached -> cached
       | None ->
-          let cell = grid_arr.(r).(c) in
+          let cell = Array.unsafe_get (Array.unsafe_get grid_arr r) c in
           let result =
             if cell = '^' then
               Int64.add (dfs (r + 1) (c - 1)) (dfs (r + 1) (c + 1))
-            else if cell = '.' || cell = 'S' then
-              dfs (r + 1) c
+            else if cell = '.' || cell = 'S' then dfs (r + 1) c
             else 0L
           in
-          Hashtbl.add memo (r, c) result;
+          Array.unsafe_set (Array.unsafe_get memo r) c (Some result);
           result
   in
   dfs
@@ -89,7 +88,7 @@ let part1 input =
   let visited = Array.make_matrix height width false in
   let queue = Queue.create () in
   Queue.add (start_r, start_c) queue;
-  bfs grid_arr height width visited queue 0
+  bfs grid_arr height width visited queue
 
 (** [part2 input] solves part 2 of the challenge
 
