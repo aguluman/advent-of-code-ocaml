@@ -3,8 +3,8 @@
     [Brief description of the problem and what this module solves]
 
     {2 Problem Summary:}
-    - {b Part 1:} [Description of part 1]
-    - {b Part 2:} [Description of part 2]
+    - {b Part 1:} Count how many times the beam splits at '^' splitters.
+    - {b Part 2:} Count total number of distinct complete paths (timelines).
 
     See details at:
     {{:https://adventofcode.com/2025/day/7} Advent of Code 2025, Day 07} *)
@@ -57,6 +57,29 @@ let rec bfs grid_arr height width visited queue count =
       else bfs grid_arr height width visited queue count
     end
 
+let count_paths grid_arr height width =
+  let memo = Hashtbl.create 10000 in
+
+  let rec dfs r c =
+    if c < 0 || c >= width || r >= height then 1L
+    else if r < 0 then 0L
+    else
+      match Hashtbl.find_opt memo (r, c) with
+      | Some cached -> cached
+      | None ->
+          let cell = grid_arr.(r).(c) in
+          let result =
+            if cell = '^' then
+              Int64.add (dfs (r + 1) (c - 1)) (dfs (r + 1) (c + 1))
+            else if cell = '.' || cell = 'S' then
+              dfs (r + 1) c
+            else 0L
+          in
+          Hashtbl.add memo (r, c) result;
+          result
+  in
+  dfs
+
 (** [part1 input] solves part 1 of the challenge
 
     @param input Raw input string from the puzzle
@@ -73,6 +96,6 @@ let part1 input =
     @param input Raw input string from the puzzle
     @return Solution for part 2 *)
 let part2 input =
-  let _ = parse input in
-  (* TODO: Implement part 2 solution *)
-  0L
+  let grid_arr, height, width, start_r, start_c = parse input in
+  let dfs = count_paths grid_arr height width in
+  dfs start_r start_c
