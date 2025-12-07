@@ -42,3 +42,8 @@ Thumbs.db
 
 # Nix Build directory (nix build)
 /result
+
+# AoC Tiles
+.aoc_tiles/*
+!.aoc_tiles/tiles/
+!.aoc_tiles/*.example
