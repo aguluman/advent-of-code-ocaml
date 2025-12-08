@@ -6,7 +6,8 @@
     - {b Part 1:} [Description of part 1]  
     - {b Part 2:} [Description of part 2]
     
-    See details at: {{:https://adventofcode.com/[YEAR]/day/[[DAY]]} Advent of Code [YEAR], Day [[DAY]]}
+    See details at:
+    {{:https://adventofcode.com/[YEAR]/day/[[DAY]]} Advent of Code [YEAR], Day [[DAY]]}
 *)
 
 (** Helper function to parse input string into a structured data format
