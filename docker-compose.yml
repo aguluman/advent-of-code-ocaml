@@ -6,7 +6,7 @@ services:
     container_name: advent-of-code-ocaml
     volumes:
       - .:/app
-      - /app/_build  # Exclude build artifacts from volume
+      - /app/_build
     working_dir: /app
     environment:
       - AOC_YEAR=2025

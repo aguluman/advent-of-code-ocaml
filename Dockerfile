@@ -1,4 +1,3 @@
-# Use Debian Trixie Slim as base for minimal size
 FROM debian:trixie-slim AS base
 
 # Install system dependencies including OPAM
