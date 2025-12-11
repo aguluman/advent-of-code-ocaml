@@ -1,8 +1,8 @@
 open OUnit2
 open Day11
 
-(** Example input from the challenge *)
-let example_input =
+(** Example input for Part 1 *)
+let example_input_part1 =
   "aaa: you hhh\n\
    you: bbb ccc\n\
    bbb: ddd eee\n\
@@ -13,6 +13,22 @@ let example_input =
    ggg: out\n\
    hhh: ccc fff iii\n\
    iii: out\n"
+
+(** Example input for Part 2 *)
+let example_input_part2 =
+  "svr: aaa bbb\n\
+   aaa: fft\n\
+   fft: ccc\n\
+   bbb: tty\n\
+   tty: ccc\n\
+   ccc: ddd eee\n\
+   ddd: hub\n\
+   hub: fff\n\
+   eee: dac\n\
+   dac: fff\n\
+   fff: ggg hhh\n\
+   ggg: out\n\
+   hhh: out\n"
 
 (** Helper function to create test cases for part1 *)
 let make_part1_test name expected_output input =
@@ -25,10 +41,10 @@ let make_part2_test name expected_output input =
   assert_equal expected_output (part2 input) ~printer:Int64.to_string
 
 (** Part 1 test cases *)
-let part1_tests = [ make_part1_test "example_part1" 5 example_input ]
+let part1_tests = [ make_part1_test "example_part1" 5 example_input_part1 ]
 
 (** Part 2 test cases *)
-let part2_tests = [ make_part2_test "example_part2" 0L example_input ]
+let part2_tests = [ make_part2_test "example_part2" 2L example_input_part2 ]
 
 (** Complete test suite *)
 let suite =
