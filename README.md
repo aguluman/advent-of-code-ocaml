@@ -4,7 +4,7 @@
 
 <!-- AOC TILES BEGIN -->
 <h1 align="center">
-  2025 - 20 ⭐ - OCaml
+  2025 - 21 ⭐ - OCaml
 </h1>
 <a href="2025/day01/day01.ml">
   <img src=".aoc_tiles/tiles/2025/01.png" width="161px">
@@ -35,6 +35,9 @@
 </a>
 <a href="2025/day10/day10.ml">
   <img src=".aoc_tiles/tiles/2025/10.png" width="161px">
+</a>
+<a href="2025/day11/day11.ml">
+  <img src=".aoc_tiles/tiles/2025/11.png" width="161px">
 </a>
 <h1 align="center">
   2024 - 50 ⭐ - OCaml

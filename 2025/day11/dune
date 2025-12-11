@@ -1,0 +1,10 @@
+(executable
+ (name test)
+ (libraries base stdio ounit2)
+ (ocamlopt_flags
+  (:standard -O3)))
+
+(rule
+ (alias runtest)
+ (action
+  (run ./test.exe)))
