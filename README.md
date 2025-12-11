@@ -4,7 +4,7 @@
 
 <!-- AOC TILES BEGIN -->
 <h1 align="center">
-  2025 - 19 ⭐ - OCaml
+  2025 - 20 ⭐ - OCaml
 </h1>
 <a href="2025/day01/day01.ml">
   <img src=".aoc_tiles/tiles/2025/01.png" width="161px">
