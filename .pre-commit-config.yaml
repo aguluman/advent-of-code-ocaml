@@ -1,8 +1,35 @@
 repos:
     - repo: https://github.com/LiquidFun/aoc_tiles
-      rev: 0.6.4
+      rev: 0.7.2
       hooks:
           - id: aoc-tiles
             args:
+                # Automatically add and amend commits with updated tiles
                 - --auto-add-tiles-to-git=amend
-                - --language-sorting=ml
+                
+                # Use modern theme for clean, colorful design
+                - --theme=modern
+                
+                # Add snow animation for a festive touch (or use 'none' for static)
+                - --animation=snow
+                
+                # Prefer OCaml files (.ml) when multiple solutions exist
+                - --language-sorting=ml,mli
+                
+                # OCaml orange as the highlight color for top 100 ranks
+                - --top100-color=#EE6A1A
+                
+                # Warm outline color that complements OCaml orange
+                - --outline-color=#D55500
+                
+                # Darker gray for incomplete tasks
+                - --not-completed-color=#2A2A2A
+                
+                # Keep text white for good contrast
+                - --text-color=#FFFFFF
+                
+                # Use outline for better visibility on light backgrounds
+                - --contrast-improvement-type=outline
+                
+                # Show total stars across all years
+                - --show-total-stars-for-all-years=yes
