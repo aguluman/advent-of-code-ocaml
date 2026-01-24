@@ -16,4 +16,4 @@ repos:
                 - --contrast-improvement-type=outline
                 - --show-total-stars-for-all-years=yes
                 - --what-to-show-on-right-side=time_and_rank
-                - --count-as-solved-when=on_leaderboard
+                - --count-as-solved-when=auto
