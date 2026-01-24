@@ -3,6 +3,17 @@ repos:
       rev: 0.7.2
       hooks:
           - id: aoc-tiles
+            stages: [post-commit]
+
             args:
                 - --auto-add-tiles-to-git=amend
-                - --language-sorting=ml
+                - --theme=modern
+                - --animation=snow
+                - --language-sorting=ml,mli
+                - --top100-color=#EE6A1A
+                - --outline-color=#D55500
+                - --not-completed-color=#2A2A2A
+                - --text-color=#FFFFFF
+                - --contrast-improvement-type=outline
+                - --what-to-show-on-right-side=time_and_rank
+                - --count-as-solved-when=both
