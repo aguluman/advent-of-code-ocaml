@@ -47,4 +47,3 @@ Thumbs.db
 .aoc_tiles/*
 !.aoc_tiles/tiles/
 !.aoc_tiles/*.example
-session.cookie
