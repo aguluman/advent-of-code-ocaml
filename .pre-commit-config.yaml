@@ -14,5 +14,4 @@ repos:
                 - --not-completed-color=#2A2A2A
                 - --text-color=#FFFFFF
                 - --contrast-improvement-type=outline
-                - --show-total-stars-for-all-years=yes
                 - --what-to-show-on-right-side=time_and_rank

@@ -3,8 +3,6 @@
 [Advent of Code](https://adventofcode.com) using OCaml
 
 <!-- AOC TILES BEGIN -->
-<h1 align="center">
-  Advent of Code - 74/550 ⭐
 </h1>
 <h1 align="center">
   2025 - 24 ⭐ - OCaml
