@@ -2,6 +2,129 @@
 
 [Advent of Code](https://adventofcode.com) using OCaml
 
+<!-- AOC TILES BEGIN -->
+<h1 align="center">
+  Advent of Code - 74/550 ⭐
+</h1>
+<h1 align="center">
+  2025 - 24 ⭐ - OCaml
+</h1>
+<a href="2025/day01/day01.ml">
+  <img src=".aoc_tiles/tiles/2025/01.gif" width="203px">
+</a>
+<a href="2025/day02/day02.ml">
+  <img src=".aoc_tiles/tiles/2025/02.gif" width="203px">
+</a>
+<a href="2025/day03/day03.ml">
+  <img src=".aoc_tiles/tiles/2025/03.gif" width="203px">
+</a>
+<a href="2025/day04/day04.ml">
+  <img src=".aoc_tiles/tiles/2025/04.gif" width="203px">
+</a>
+<a href="2025/day05/day05.ml">
+  <img src=".aoc_tiles/tiles/2025/05.gif" width="203px">
+</a>
+<a href="2025/day06/day06.ml">
+  <img src=".aoc_tiles/tiles/2025/06.gif" width="203px">
+</a>
+<a href="2025/day07/day07.ml">
+  <img src=".aoc_tiles/tiles/2025/07.gif" width="203px">
+</a>
+<a href="2025/day08/day08.ml">
+  <img src=".aoc_tiles/tiles/2025/08.gif" width="203px">
+</a>
+<a href="2025/day09/day09.ml">
+  <img src=".aoc_tiles/tiles/2025/09.gif" width="203px">
+</a>
+<a href="2025/day10/day10.ml">
+  <img src=".aoc_tiles/tiles/2025/10.gif" width="203px">
+</a>
+<a href="2025/day11/day11.ml">
+  <img src=".aoc_tiles/tiles/2025/11.gif" width="203px">
+</a>
+<a href="2025/day12/day12.ml">
+  <img src=".aoc_tiles/tiles/2025/12.gif" width="203px">
+</a>
+<h1 align="center">
+  2024 - 50 ⭐ - OCaml
+</h1>
+<a href="2024/day01/day01.ml">
+  <img src=".aoc_tiles/tiles/2024/01.gif" width="161px">
+</a>
+<a href="2024/day02/day02.ml">
+  <img src=".aoc_tiles/tiles/2024/02.gif" width="161px">
+</a>
+<a href="2024/day03/day03.ml">
+  <img src=".aoc_tiles/tiles/2024/03.gif" width="161px">
+</a>
+<a href="2024/day04/day04.ml">
+  <img src=".aoc_tiles/tiles/2024/04.gif" width="161px">
+</a>
+<a href="2024/day05/day05.ml">
+  <img src=".aoc_tiles/tiles/2024/05.gif" width="161px">
+</a>
+<a href="2024/day06/day06.ml">
+  <img src=".aoc_tiles/tiles/2024/06.gif" width="161px">
+</a>
+<a href="2024/day07/day07.ml">
+  <img src=".aoc_tiles/tiles/2024/07.gif" width="161px">
+</a>
+<a href="2024/day08/day08.ml">
+  <img src=".aoc_tiles/tiles/2024/08.gif" width="161px">
+</a>
+<a href="2024/day09/day09.ml">
+  <img src=".aoc_tiles/tiles/2024/09.gif" width="161px">
+</a>
+<a href="2024/day10/day10.ml">
+  <img src=".aoc_tiles/tiles/2024/10.gif" width="161px">
+</a>
+<a href="2024/day11/day11.ml">
+  <img src=".aoc_tiles/tiles/2024/11.gif" width="161px">
+</a>
+<a href="2024/day12/day12.ml">
+  <img src=".aoc_tiles/tiles/2024/12.gif" width="161px">
+</a>
+<a href="2024/day13/day13.ml">
+  <img src=".aoc_tiles/tiles/2024/13.gif" width="161px">
+</a>
+<a href="2024/day14/day14.ml">
+  <img src=".aoc_tiles/tiles/2024/14.gif" width="161px">
+</a>
+<a href="2024/day15/day15.ml">
+  <img src=".aoc_tiles/tiles/2024/15.gif" width="161px">
+</a>
+<a href="2024/day16/day16.ml">
+  <img src=".aoc_tiles/tiles/2024/16.gif" width="161px">
+</a>
+<a href="2024/day17/day17.ml">
+  <img src=".aoc_tiles/tiles/2024/17.gif" width="161px">
+</a>
+<a href="2024/day18/day18.ml">
+  <img src=".aoc_tiles/tiles/2024/18.gif" width="161px">
+</a>
+<a href="2024/day19/day19.ml">
+  <img src=".aoc_tiles/tiles/2024/19.gif" width="161px">
+</a>
+<a href="2024/day20/day20.ml">
+  <img src=".aoc_tiles/tiles/2024/20.gif" width="161px">
+</a>
+<a href="2024/day21/day21.ml">
+  <img src=".aoc_tiles/tiles/2024/21.gif" width="161px">
+</a>
+<a href="2024/day22/day22.ml">
+  <img src=".aoc_tiles/tiles/2024/22.gif" width="161px">
+</a>
+<a href="2024/day23/day23.ml">
+  <img src=".aoc_tiles/tiles/2024/23.gif" width="161px">
+</a>
+<a href="2024/day24/day24.ml">
+  <img src=".aoc_tiles/tiles/2024/24.gif" width="161px">
+</a>
+<a href="2024/day25/day25.ml">
+  <img src=".aoc_tiles/tiles/2024/25.gif" width="161px">
+</a>
+<!-- AOC TILES END -->
+
 ## Getting Started
 
 To get started with OCaml development locally:
