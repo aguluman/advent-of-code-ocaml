@@ -1,8 +1,6 @@
 (executable
  (name test_template)
- (libraries base stdio ounit2)
- (ocamlopt_flags
-  (:standard -O3)))
+ (libraries base stdio ounit2))
 
 (rule
  (alias runtest)
