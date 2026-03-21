@@ -1,0 +1,5 @@
+* text=auto
+*.ml text eol=lf
+*.mli text eol=lf
+*.ocamlformat text eol=lf
+Makefile text eol=lf

@@ -44,7 +44,7 @@ let parse_button s =
            acc lor (1 lsl pos))
          0
 
-(** Parse joltage requirements like "{3,5,4,7}" into a float list *)
+(** Parse joltage requirements like [3, 5, 4, 7] into a float list *)
 let parse_joltage s =
   let inner = String.sub s 1 (String.length s - 2) in
   String.split_on_char ',' inner
