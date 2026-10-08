@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     libgmp-dev \
     zlib1g-dev \
     hyperfine \
+    libglpk-dev \
     opam \
     && rm -rf /var/lib/apt/lists/*
 
@@ -24,8 +25,9 @@ RUN opam init --disable-sandboxing --yes && \
         dune \
         ocamlformat \
         ounit2 \
-        base \
-        stdio \
+        domainslib \
+        lp \
+        lp-glpk \
         ocaml-lsp-server
 
 # Set PATH to include the correct switch

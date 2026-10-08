@@ -11,15 +11,41 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
+        # lp and lp-glpk (used by 2025/day10) are not in nixpkgs, so build them
+        # from the same release tarball opam uses. lp-glpk links against the
+        # GLPK C library, so it propagates pkgs.glpk to everything using it.
+        lpSrc = pkgs.fetchurl {
+          url = "https://github.com/ktahar/ocaml-lp/archive/0.5.0.tar.gz";
+          hash = "sha256-SStSUhbq7cHu2CwZ2patClJ0afVxYhHkUG2EXItmnyk=";
+        };
+
+        lp = pkgs.ocamlPackages.buildDunePackage {
+          pname = "lp";
+          version = "0.5.0";
+          src = lpSrc;
+          minimalOCamlVersion = "5.1";
+          nativeBuildInputs = [ pkgs.ocamlPackages.menhir ];
+          propagatedBuildInputs = [ pkgs.ocamlPackages.menhirLib ];
+        };
+
+        lp-glpk = pkgs.ocamlPackages.buildDunePackage {
+          pname = "lp-glpk";
+          version = "0.5.0";
+          src = lpSrc;
+          minimalOCamlVersion = "5.1";
+          propagatedBuildInputs = [ lp pkgs.ocamlPackages.ctypes pkgs.glpk ];
+        };
+
+        # Libraries the solutions use (domainslib: 2024 days 20-23 and 25)
+        solutionLibs = (with pkgs.ocamlPackages; [ ounit2 domainslib ])
+          ++ [ lp lp-glpk ];
+
         # OCaml development dependencies
-        ocamlPackages = with pkgs.ocamlPackages; [
+        ocamlPackages = (with pkgs.ocamlPackages; [
           dune_3
-          base
-          stdio
-          ounit2
           ocamlformat
           ocaml-lsp
-        ];
+        ]) ++ solutionLibs;
 
         # Build tools and utilities
         buildTools = with pkgs; [
@@ -62,12 +88,7 @@
 
                 nativeBuildInputs = [ pkgs.ocaml pkgs.dune_3 ];
 
-                buildInputs = with pkgs.ocamlPackages; [
-                  base
-                  stdio
-                  ounit2
-                  findlib
-                ];
+                buildInputs = [ pkgs.ocamlPackages.findlib ] ++ solutionLibs;
 
                 buildPhase = ''
                   runHook preBuild
