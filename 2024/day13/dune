@@ -1,6 +1,6 @@
 (executable
  (name test)
- (libraries base stdio ounit2 str unix))
+ (libraries ounit2 str unix))
 
 (rule
  (alias runtest)

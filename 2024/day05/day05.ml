@@ -1,101 +1,121 @@
-open Base
+(** Day 5: Print Queue
 
-let split_updates rules updates =
+    Page-ordering rules [X|Y] say page [X] must be printed before page [Y].
+    Each update is a list of pages.
+
+    {2 Problem Summary:}
+    - {b Part 1:} Sum the middle page of every update that is already in the
+      right order.
+    - {b Part 2:} Re-order every incorrect update and sum their middle pages.
+
+    See details at:
+    {{:https://adventofcode.com/2024/day/5} Advent of Code 2024, Day 5} *)
+
+module IntMap = Map.Make (Int)
+module IntSet = Set.Make (Int)
+
+type rule = int * int
+(** [(x, y)] means page [x] must come before page [y]. *)
+
+type update = int list
+
+type classified = {
+  following : IntSet.t IntMap.t;
+      (** Each page mapped to the pages that must come after it. *)
+  correct : update list;
+  incorrect : update list;
+}
+
+(** Every pair of distinct pages mentioned in the rules must be related by a
+    rule; the comparison in {!part2} relies on it. *)
+let assert_rules_are_total rules =
   let pages =
-    List.fold rules ~init:[] ~f:(fun acc (p, q) -> p :: q :: acc)
-    |> List.dedup_and_sort ~compare:Int.compare
+    List.concat_map (fun (p, q) -> [ p; q ]) rules |> List.sort_uniq Int.compare
   in
-
-  List.iter (List.cartesian_product pages pages) ~f:(fun (p, q) ->
-      assert (
-        p = q
-        || List.exists rules ~f:(fun (x, y) -> x = p && y = q)
-        || List.exists rules ~f:(fun (x, y) -> x = q && y = p)));
-
-  let following =
-    List.fold rules
-      ~init:(Map.empty (module Int))
-      ~f:(fun acc (p, q) ->
-        let v =
-          Map.find acc p |> Option.value ~default:(Set.empty (module Int))
-        in
-        Map.set acc ~key:p ~data:(Set.add v q))
+  let related p q =
+    List.exists (fun (x, y) -> (x = p && y = q) || (x = q && y = p)) rules
   in
+  List.iter
+    (fun p -> List.iter (fun q -> assert (p = q || related p q)) pages)
+    pages
 
-  let partition_updates updates =
-    let check_updates updates =
-      List.for_alli updates ~f:(fun i p ->
-          List.for_all
-            (List.drop updates (i + 1))
-            ~f:(fun q ->
-              let p_q =
-                Map.find following p
-                |> Option.value_map ~default:true ~f:(fun v -> Set.mem v q)
-              in
-              let q_p =
-                Map.find following q
-                |> Option.value_map ~default:true ~f:(fun v ->
-                    not (Set.mem v p))
-              in
-              p_q && q_p))
-    in
-    List.partition_tf updates ~f:check_updates
+let successors rules =
+  List.fold_left
+    (fun acc (p, q) ->
+      IntMap.update p
+        (fun after ->
+          Some (IntSet.add q (Option.value after ~default:IntSet.empty)))
+        acc)
+    IntMap.empty rules
+
+(** [in_order following p q] holds unless a rule forbids [p] before [q]. *)
+let in_order following p q =
+  let p_allows_q =
+    match IntMap.find_opt p following with
+    | Some after -> IntSet.mem q after
+    | None -> true
   in
+  let q_allows_p =
+    match IntMap.find_opt q following with
+    | Some after -> not (IntSet.mem p after)
+    | None -> true
+  in
+  p_allows_q && q_allows_p
 
-  let correct, incorrect = partition_updates updates in
-  (following, (correct, incorrect))
+(** An update is correct when every page is in order with every later page. *)
+let rec is_correct following = function
+  | [] -> true
+  | p :: rest ->
+      List.for_all (in_order following p) rest && is_correct following rest
+
+let classify (rules : rule list) (updates : update list) : classified =
+  assert_rules_are_total rules;
+  let following = successors rules in
+  let correct, incorrect = List.partition (is_correct following) updates in
+  { following; correct; incorrect }
+
+let middle update = List.nth update (List.length update / 2)
+let sum = List.fold_left ( + ) 0
 
 let part1 rules updates =
-  let _, (correct_updates, _) = split_updates rules updates in
-  List.fold correct_updates ~init:0 ~f:(fun acc updates ->
-      acc + List.nth_exn updates (List.length updates / 2))
+  let { correct; _ } = classify rules updates in
+  correct |> List.map middle |> sum
 
 let part2 rules updates =
-  let following, (_, incorrect_updates) = split_updates rules updates in
-  List.fold incorrect_updates ~init:0 ~f:(fun acc updates ->
-      let sorted =
-        List.sort updates ~compare:(fun p q ->
-            match Map.find following p with
-            | Some v -> if Set.mem v q then -1 else 1
-            | None -> 1)
-      in
-      acc + List.nth_exn sorted (List.length sorted / 2))
-
-let parse input =
-  (* Split input into rules and updates blocks *)
-  let blocks = String.split input ~on:'\n' in
-  let rules_block, updates_block =
-    match
-      List.group blocks ~break:(fun _ x -> String.is_empty (String.strip x))
-    with
-    | [ rules; updates ] ->
-        (String.concat ~sep:"\n" rules, String.concat ~sep:"\n" updates)
-    | _ -> ("", "")
+  let { following; incorrect; _ } = classify rules updates in
+  let compare p q =
+    match IntMap.find_opt p following with
+    | Some after -> if IntSet.mem q after then -1 else 1
+    | None -> 1
   in
+  incorrect |> List.map (fun u -> middle (List.sort compare u)) |> sum
 
-  (* Parse rules *)
-  let rules =
-    String.split rules_block ~on:'\n'
-    |> List.filter ~f:(fun s -> not (String.is_empty (String.strip s)))
-    |> List.filter_map ~f:(fun line ->
-        try
-          let parts = String.split (String.strip line) ~on:'|' in
-          match parts with
-          | [ p; q ] ->
-              Some
-                (Int.of_string (String.strip p), Int.of_string (String.strip q))
-          | _ -> None
-        with _ -> None)
+(** Lines up to the first blank line, and the lines after it. *)
+let split_at_blank lines =
+  let rec go acc = function
+    | [] -> (List.rev acc, [])
+    | "" :: rest -> (List.rev acc, rest)
+    | line :: rest -> go (line :: acc) rest
   in
+  go [] lines
 
-  (* Parse updates *)
-  let updates =
-    String.split updates_block ~on:'\n'
-    |> List.filter ~f:(fun s -> not (String.is_empty (String.strip s)))
-    |> List.map ~f:(fun line ->
-        String.split (String.strip line) ~on:','
-        |> List.filter_map ~f:(fun x ->
-            try Some (Int.of_string (String.strip x)) with _ -> None))
-  in
+let parse_rule line =
+  match String.split_on_char '|' line with
+  | [ p; q ] -> (
+      match
+        (int_of_string_opt (String.trim p), int_of_string_opt (String.trim q))
+      with
+      | Some p, Some q -> Some (p, q)
+      | _ -> None)
+  | _ -> None
 
-  (rules, updates)
+let parse_update line =
+  String.split_on_char ',' line
+  |> List.filter_map (fun page -> int_of_string_opt (String.trim page))
+
+let parse input : rule list * update list =
+  let lines = String.split_on_char '\n' input |> List.map String.trim in
+  let rule_lines, update_lines = split_at_blank lines in
+  let non_blank = List.filter (fun line -> line <> "") in
+  ( rule_lines |> non_blank |> List.filter_map parse_rule,
+    update_lines |> non_blank |> List.map parse_update )

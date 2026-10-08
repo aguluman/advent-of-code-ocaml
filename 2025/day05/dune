@@ -1,6 +1,6 @@
 (executable
  (name test)
- (libraries base stdio ounit2)
+ (libraries ounit2 unix)
  (ocamlopt_flags
   (:standard -O3)))
 
