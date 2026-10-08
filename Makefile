@@ -27,7 +27,14 @@ export YEAR
 # ---------------------------------------------------------------------------
 define AOC_LIB_SRC
 set -o pipefail
-AOC_USER_AGENT="github.com/aguluman/advent-of-code-ocaml"
+# The User-Agent sent to adventofcode.com, from AOC_USER_AGENT in .env
+# (surrounding quotes and Windows line endings are removed).
+user_agent() {
+  local ua
+  ua=$(grep -E '^AOC_USER_AGENT=' .env 2>/dev/null | head -n 1 | cut -d= -f2- | tr -d '\r' | sed -E 's/^"(.*)"$/\1/')
+  [ -n "$ua" ] || die "No AOC_USER_AGENT found in .env. Add a line: AOC_USER_AGENT=\"github.com/you/repo by you@example.com\""
+  printf '%s' "$ua"
+}
 
 die() {
   printf '%b\n' "$*" >&2
@@ -74,6 +81,7 @@ aoc_download() {
     echo "Existing $out is empty or not a puzzle input; downloading it again."
   fi
   token=$(session_token) || exit 1
+  ua=$(user_agent) || exit 1
   url="https://adventofcode.com/$YEAR/day/$(day_number "$day")/input"
   mkdir -p "inputs/$YEAR" || die "Could not create inputs/$YEAR"
   tmp=$(mktemp "inputs/$YEAR/.day$day.XXXXXX") || die "Could not create a temporary file"
@@ -81,7 +89,7 @@ aoc_download() {
   trap 'rm -f "$tmp"' EXIT INT TERM
   echo "Downloading $url"
   # -f: treat HTTP errors (400 bad cookie, 404 not unlocked yet) as failures.
-  if ! curl -fsS --cookie "session=$token" -A "$AOC_USER_AGENT" -o "$tmp" "$url"; then
+  if ! curl -fsS --cookie "session=$token" -A "$ua" -o "$tmp" "$url"; then
     rm -f "$tmp"
     die "Download failed. Is AUTH_TOKEN in .env still valid, and is day $day unlocked?"
   fi
@@ -307,10 +315,11 @@ new-day:
 	\
 	# Fetch problem title from AOC website \
 	SESSION_TOKEN=$$(grep AUTH_TOKEN .env 2>/dev/null | cut -d'=' -f2 2>/dev/null || echo ""); \
-	if [ ! -z "$$SESSION_TOKEN" ]; then \
+	USER_AGENT=$$( eval "$$AOC_LIB"; user_agent 2>/dev/null ); \
+	if [ -n "$$SESSION_TOKEN" ] && [ -n "$$USER_AGENT" ]; then \
 		echo "Fetching problem title from AOC..."; \
 		RESPONSE=$$(curl -s --cookie "session=$$SESSION_TOKEN" \
-			-H "User-Agent: github.com/advent-of-code-ocaml" \
+			-H "User-Agent: $$USER_AGENT" \
 			"https://adventofcode.com/$(YEAR)/day/$$(echo $$day | sed 's/^0*//')" 2>/dev/null || echo ""); \
 		if [ ! -z "$$RESPONSE" ]; then \
 			PROBLEM_TITLE=$$(echo "$$RESPONSE" | grep -o -- "--- Day [0-9][0-9]*: .*---" | sed 's/--- Day [0-9][0-9]*: \(.*\) ---/\1/' | head -n 1 | sed 's/[[:space:]]*$$//'); \
@@ -332,7 +341,7 @@ new-day:
 			sed -i "s/\[YEAR\]/$(YEAR)/g" "$(YEAR)/day$$day/day_template.ml"; \
 		fi; \
 	else \
-		echo "No session token found in .env file, using placeholder title"; \
+		echo "No AUTH_TOKEN or AOC_USER_AGENT in .env, using placeholder title"; \
 		sed -i "s/\[\[DAY\]\]/$$day/g" "$(YEAR)/day$$day/day_template.ml"; \
 		sed -i "s/\[Problem Title\]/Problem Title/g" "$(YEAR)/day$$day/day_template.ml"; \
 		sed -i "s/\[YEAR\]/$(YEAR)/g" "$(YEAR)/day$$day/day_template.ml"; \
@@ -381,6 +390,7 @@ check-status:
 		exit 1; \
 	fi; \
 	SESSION_TOKEN=$$( eval "$$AOC_LIB"; session_token ) || exit 1; \
+	USER_AGENT=$$( eval "$$AOC_LIB"; user_agent ) || exit 1; \
 	if [ -z "$$SESSION_TOKEN" ]; then \
 		echo "No session token found in .env file"; \
 		exit 1; \
@@ -389,7 +399,7 @@ check-status:
 	DAY_NUM=$$(echo $(DAY) | sed 's/^0*//'); \
 	RESPONSE=$$(curl -s --cookie "session=$$SESSION_TOKEN" \
 		"https://adventofcode.com/$(YEAR)/day/$$DAY_NUM" \
-		-H "User-Agent: github.com/advent-of-code-ocaml"); \
+		-H "User-Agent: $$USER_AGENT"); \
 	if echo "$$RESPONSE" | grep -q "Both parts of this puzzle are complete! They provide two gold stars: \*\*"; then \
 		echo "Part 1: Completed ✓"; \
 		echo "Part 2: Completed ✓"; \
@@ -416,13 +426,14 @@ submit:
 	# First check if the part is already completed online \
 	echo "Checking submission status for day $(DAY)..."; \
 	SESSION_TOKEN=$$( eval "$$AOC_LIB"; session_token ) || exit 1; \
+	USER_AGENT=$$( eval "$$AOC_LIB"; user_agent ) || exit 1; \
 	if [ -z "$$SESSION_TOKEN" ]; then \
 		echo "No session token found in .env file!"; \
 		exit 1; \
 	fi; \
 	DAY_NUM=$$(echo $(DAY) | sed 's/^0*//'); \
 	RESPONSE=$$(curl -s --cookie "session=$$SESSION_TOKEN" \
-		-H "User-Agent: github.com/advent-of-code-ocaml" \
+		-H "User-Agent: $$USER_AGENT" \
 		"https://adventofcode.com/$(YEAR)/day/$$DAY_NUM"); \
 	\
 	# Check if part is already completed \
@@ -482,7 +493,7 @@ submit:
 	echo "Found answer for Day $(DAY) Part $(PART): $$ANSWER"; \
 	echo "Submitting answer..."; \
 	RESPONSE=$$(curl -s -X POST --cookie "session=$$SESSION_TOKEN" \
-		-H "User-Agent: github.com/advent-of-code-ocaml" \
+		-H "User-Agent: $$USER_AGENT" \
 		-d "level=$(PART)&answer=$$ANSWER" \
 		"https://adventofcode.com/$(YEAR)/day/$$DAY_NUM/answer"); \
 	if echo "$$RESPONSE" | grep -q "That's the right answer!"; then \
