@@ -27,11 +27,10 @@ export YEAR
 # ---------------------------------------------------------------------------
 define AOC_LIB_SRC
 set -o pipefail
-# The User-Agent sent to adventofcode.com, from AOC_USER_AGENT in .env
-# (surrounding quotes and Windows line endings are removed).
+# The User-Agent sent to adventofcode.com, from AOC_USER_AGENT in .env.
 user_agent() {
   local ua
-  ua=$(grep -E '^AOC_USER_AGENT=' .env 2>/dev/null | head -n 1 | cut -d= -f2- | tr -d '\r' | sed -E 's/^"(.*)"$/\1/')
+  ua=$(env_value AOC_USER_AGENT)
   [ -n "$ua" ] || die "No AOC_USER_AGENT found in .env. Add a line: AOC_USER_AGENT=\"github.com/you/repo by you@example.com\""
   printf '%s' "$ua"
 }
@@ -52,11 +51,17 @@ day_number() {
   printf '%s' "${n:-0}"
 }
 
-# The session cookie from .env, with CR (Windows line endings) and whitespace
-# stripped, since either one silently breaks the cookie.
+# Print the value of KEY from .env: the first KEY=value line, with any
+# Windows line ending and surrounding double quotes removed.
+env_value() {
+  grep -E "^$1=" .env 2>/dev/null | head -n 1 | cut -d= -f2- | tr -d '\r' | sed -E 's/^"(.*)"$/\1/'
+}
+
+# The session cookie from .env. Whitespace is stripped too, since a stray
+# space silently breaks the cookie.
 session_token() {
   local token
-  token=$(grep -E '^AUTH_TOKEN=' .env 2>/dev/null | head -n 1 | cut -d= -f2- | tr -d '\r[:space:]')
+  token=$(env_value AUTH_TOKEN | tr -d '[:space:]')
   [ -n "$token" ] || die "No session token found in .env. Add a line: AUTH_TOKEN=your_token"
   printf '%s' "$token"
 }
@@ -113,13 +118,14 @@ resolve_input() {
       ;;
     puzzle_input)
       mkdir -p "inputs/$YEAR"
-      if [ -n "${AOC_DOWNLOADS:-}" ]; then
-        downloads=$AOC_DOWNLOADS
-      elif [ -d /mnt/c/Users/chukw/Downloads ]; then
-        downloads=/mnt/c/Users/chukw/Downloads
-      else
-        downloads=$HOME/Downloads
+      # AOC_DOWNLOADS (environment or .env) wins; on WSL, point it at
+      # /mnt/c/Users/<name>/Downloads. Otherwise ask the OS (xdg-user-dir
+      # handles localized folder names), falling back to ~/Downloads.
+      downloads=${AOC_DOWNLOADS:-$(env_value AOC_DOWNLOADS)}
+      if [ -z "$downloads" ] && command -v xdg-user-dir >/dev/null 2>&1; then
+        downloads=$(xdg-user-dir DOWNLOAD)
       fi
+      downloads=${downloads:-$HOME/Downloads}
       for candidate in "inputs/$YEAR/day$day.txt" "inputs/$YEAR/input.txt" "$downloads/input.txt"; do
         if [ -f "$candidate" ]; then
           path=$candidate
@@ -322,11 +328,13 @@ new-day:
 			-H "User-Agent: $$USER_AGENT" \
 			"https://adventofcode.com/$(YEAR)/day/$$(echo $$day | sed 's/^0*//')" 2>/dev/null || echo ""); \
 		if [ ! -z "$$RESPONSE" ]; then \
-			PROBLEM_TITLE=$$(echo "$$RESPONSE" | grep -o -- "--- Day [0-9][0-9]*: .*---" | sed 's/--- Day [0-9][0-9]*: \(.*\) ---/\1/' | head -n 1 | sed 's/[[:space:]]*$$//'); \
+			PROBLEM_TITLE=$$(echo "$$RESPONSE" | grep -o -- '--- Day [0-9]*: [^<]* ---' | head -n 1 | sed -e 's/^--- Day [0-9]*: //' -e 's/ ---$$//'); \
+			# Escape \ / & so the title is safe inside the sed replacements below \
+			SAFE_TITLE=$$(printf '%s' "$$PROBLEM_TITLE" | sed 's/[\/&]/\\&/g'); \
 			if [ ! -z "$$PROBLEM_TITLE" ]; then \
 				echo "Found problem title: $$PROBLEM_TITLE"; \
 				sed -i "s/\[\[DAY\]\]/$$day/g" "$(YEAR)/day$$day/day_template.ml"; \
-				sed -i "s/\[Problem Title\]/$$PROBLEM_TITLE/g" "$(YEAR)/day$$day/day_template.ml"; \
+				sed -i "s/\[Problem Title\]/$$SAFE_TITLE/g" "$(YEAR)/day$$day/day_template.ml"; \
 				sed -i "s/\[YEAR\]/$(YEAR)/g" "$(YEAR)/day$$day/day_template.ml"; \
 			else \
 				echo "Could not extract problem title, using placeholder"; \
@@ -606,8 +614,6 @@ help:
 	@echo "  run-day         : Run a specific day with input and save answers"
 	@echo "  run-release     : Build and run a specific day in release mode and save answers"
 	@echo "  run-current     : Run the most recently modified day with input (no answer saving)"
-	@echo "  submit          : Submit an answer (DAY=XX PART=1 or 2)"
-	@echo "  run-submit      : Run a day in release mode and prompt to submit (DAY=XX INPUT=...)"
 	@echo ""
 	@echo "  make download DAY=XX [FORCE=1]            : Download puzzle input for day XX"
 	@echo "  make check-status DAY=XX                  : Check submission status for day XX"
@@ -616,7 +622,7 @@ help:
 	@echo "  make run-submit DAY=XX INPUT=download     : Download input, run day XX, and prompt to submit"
 	@echo ""
 	@echo "INPUT can be a path, 'download', or 'puzzle_input' (looks in inputs/YEAR/dayXX.txt,"
-	@echo "inputs/YEAR/input.txt, then \$$AOC_DOWNLOADS/input.txt or your Downloads folder)."
+	@echo "inputs/YEAR/input.txt, then input.txt in AOC_DOWNLOADS (env or .env) or your Downloads folder)."
 	@echo "Empty or invalid input files are rejected before the solution runs."
 	@echo "Override the year with YEAR=2024."
 	@echo ""

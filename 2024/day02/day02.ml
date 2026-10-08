@@ -39,8 +39,7 @@ let parse input =
       |> List.filter (fun s -> String.trim s <> "")
       |> List.map int_of_string)
 
-(*
-  How to run am Ocam file in the console and read from an input, 
-  1] ocamlc -o test.exe test.ml
-  2] type "C:\Users\chukw\Downloads\input.txt" | .\test.exe
-*)
+(* To run this day on an input file, from the repository root:
+     make run-day DAY=02 INPUT=path/to/input.txt
+   or from this directory:
+     dune exec ./test.exe < path/to/input.txt *)
