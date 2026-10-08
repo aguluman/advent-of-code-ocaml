@@ -52,7 +52,7 @@ let transpose matrix =
 
     Example:
     {[
-      array_rev [| 1; 2; 3 |] = [| 3; 2; 1 |]
+    array_rev [| 1; 2; 3 |] = [| 3; 2; 1 |]
     ]}
 
     @param arr Source array to reverse

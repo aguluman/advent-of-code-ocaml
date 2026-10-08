@@ -1,7 +1,7 @@
 (** Day 5: Print Queue
 
-    Page-ordering rules [X|Y] say page [X] must be printed before page [Y].
-    Each update is a list of pages.
+    Page-ordering rules [X|Y] say page [X] must be printed before page [Y]. Each
+    update is a list of pages.
 
     {2 Problem Summary:}
     - {b Part 1:} Sum the middle page of every update that is already in the
@@ -14,8 +14,8 @@
 module IntMap = Map.Make (Int)
 module IntSet = Set.Make (Int)
 
-type rule = int * int
 (** [(x, y)] means page [x] must come before page [y]. *)
+type rule = int * int
 
 type update = int list
 

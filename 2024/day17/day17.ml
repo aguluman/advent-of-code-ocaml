@@ -55,7 +55,7 @@ type cpu_state = {
     @return base raised to the power of exponent
 
     {[
-      power_of_two 2L 3L = 8L power_of_two 2L 10L = 1024L
+    power_of_two 2L 3L = 8L power_of_two 2L 10L = 1024L
     ]} *)
 let rec power_of_two base exponent =
   if exponent = 0L then 1L

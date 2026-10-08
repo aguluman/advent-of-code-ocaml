@@ -39,7 +39,7 @@ let flatten list_of_lists =
     The numeric keypad layout is as follows:
 
     {[
-      7 8 9 4 5 6 1 2 3 0 A
+    7 8 9 4 5 6 1 2 3 0 A
     ]}
 
     @raise Failure if the specified [button] is not a valid directional button.
