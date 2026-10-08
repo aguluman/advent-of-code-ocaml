@@ -595,6 +595,8 @@ help:
 	@echo "  run-day         : Run a specific day with input and save answers"
 	@echo "  run-release     : Build and run a specific day in release mode and save answers"
 	@echo "  run-current     : Run the most recently modified day with input (no answer saving)"
+	@echo "  submit          : Submit an answer (DAY=XX PART=1 or 2)"
+	@echo "  run-submit      : Run a day in release mode and prompt to submit (DAY=XX INPUT=...)"
 	@echo ""
 	@echo "  make download DAY=XX [FORCE=1]            : Download puzzle input for day XX"
 	@echo "  make check-status DAY=XX                  : Check submission status for day XX"
