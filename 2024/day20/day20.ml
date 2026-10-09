@@ -111,182 +111,137 @@ let breadth_first_search (start_row, start_col) maze =
   done;
   distances
 
-(** [part1 maze] analyzes which walls, when removed, create shortcuts in the
-    maze
+(** [with_pool f] runs [f pool] on a Domainslib pool sized to this machine, and
+    always tears the pool down, even if [f] raises. The domain calling
+    [Task.run] also works, so the pool gets one fewer than the recommended
+    count. *)
+let with_pool f =
+  let num_domains = Domain.recommended_domain_count () - 1 in
+  let pool = Task.setup_pool ~num_domains () in
+  Fun.protect
+    ~finally:(fun () -> Task.teardown_pool pool)
+    (fun () -> Task.run pool (fun () -> f pool))
 
-    Algorithm:
-    - 1. Find start (S) and end (E) positions in the maze
-    - 2. Compute the shortest path in the original maze
-    - 3. For each candidate wall that could be a shortcut:
-    - a. Remove the wall temporarily
-    - b. Recompute shortest path
-    - c. If path length decreases, record the improvement
-    - 4. Return statistics on path improvements sorted by magnitude
+(** [add_count counts key] increments [key]'s count in [counts]. *)
+let add_count counts key =
+  let count = Option.value (Hashtbl.find_opt counts key) ~default:0 in
+  Hashtbl.replace counts key (count + 1)
+
+(** [sorted_counts counts] is [counts] as a list of (value, count) pairs, sorted
+    by value. *)
+let sorted_counts counts =
+  Hashtbl.fold (fun key count acc -> (key, count) :: acc) counts []
+  |> List.sort compare
+
+(** [part1 maze] analyzes which walls, when removed, create shortcuts in the
+    maze.
+
+    Removing wall [w] creates exactly one new kind of route: S to a neighbour
+    [a] of [w], through [w], to another neighbour [b], then on to E. Its length
+    is [dS(a) + 2 + dE(b)], where [dS] and [dE] are the distances from S and
+    from E in the original maze. (A shortest path visits [w] at most once, so
+    the parts before and after it are ordinary shortest paths.) So two BFS runs
+    give every wall's effect, instead of one BFS per wall.
 
     @param maze The 2D character array representing the maze
     @return
       A list of (improvement_value, frequency) pairs sorted by improvement value
 *)
 let part1 maze =
-  (* Identify maze dimensions and key positions *)
   let rows = Array.length maze in
   let cols = Array.length maze.(0) in
-  let start_row, start_col = find_position maze 'S' in
-  let goal_row, goal_col = find_position maze 'E' in
-  let initial_distances = breadth_first_search (start_row, start_col) maze in
-  let original_distance =
-    OptimizedArray.get initial_distances
-      (calculate_index cols goal_row goal_col)
+  let start = find_position maze 'S' in
+  let goal = find_position maze 'E' in
+  let from_start = breadth_first_search start maze in
+  let from_goal = breadth_first_search goal maze in
+  let distance distances (row, col) =
+    OptimizedArray.get distances (calculate_index cols row col)
   in
-
-  (* Identify candidate walls that might be shortcuts *)
-  let walls = ref [] in
+  let original_distance = distance from_start goal in
+  let is_open (row, col) = maze.(row).(col) <> '#' in
+  let improvements = Hashtbl.create 64 in
   for row = 1 to rows - 2 do
     for col = 1 to cols - 2 do
-      if maze.(row).(col) = '#' then
-        (* Check if wall has adjacent passages *)
-        let has_vertical_passage =
-          maze.(row - 1).(col) <> '#' && maze.(row + 1).(col) <> '#'
+      let up = (row - 1, col) and down = (row + 1, col) in
+      let left = (row, col - 1) and right = (row, col + 1) in
+      (* Candidate walls: open on two opposite sides *)
+      if
+        maze.(row).(col) = '#'
+        && ((is_open up && is_open down) || (is_open left && is_open right))
+      then
+        let neighbours = List.filter is_open [ up; down; left; right ] in
+        let shortest_through_wall =
+          List.fold_left
+            (fun best a ->
+              List.fold_left
+                (fun best b ->
+                  let to_a = distance from_start a in
+                  let from_b = distance from_goal b in
+                  if a = b || to_a = max_int || from_b = max_int then best
+                  else min best (to_a + 2 + from_b))
+                best neighbours)
+            max_int neighbours
         in
-        let has_horizontal_passage =
-          maze.(row).(col - 1) <> '#' && maze.(row).(col + 1) <> '#'
-        in
-        if has_vertical_passage || has_horizontal_passage then
-          walls := (row, col) :: !walls
+        if shortest_through_wall < original_distance then
+          add_count improvements (original_distance - shortest_through_wall)
     done
   done;
+  sorted_counts improvements
 
-  (* Set up parallel task pool *)
-  let num_domains = try int_of_string Sys.argv.(1) with _ -> 4 in
-  let pool = Task.setup_pool ~num_domains:(num_domains - 1) () in
+(** [part2 maze] analyzes path inefficiency compared to Manhattan distance.
 
-  (* Process walls in parallel *)
-  let improvement_list = Atomic.make [] in
+    For each pair of reachable points at most 20 apart (Manhattan distance), it
+    records how much shorter the straight jump is than the path. Only the
+    diamond of cells within distance 20 of each point is visited, rather than
+    the whole grid.
 
-  (* Mutex to protect the shared improvement list *)
-  let mutex = Mutex.create () in
-
-  (* Run parallel tasks *)
-  Task.run pool (fun () ->
-      Task.parallel_for pool ~start:0
-        ~finish:(List.length !walls - 1)
-        ~body:(fun i ->
-          let row, col = List.nth !walls i in
-          let maze_copy = Array.map Array.copy maze in
-
-          (* Try removing wall *)
-          maze_copy.(row).(col) <- '.';
-          let new_distances =
-            breadth_first_search (start_row, start_col) maze_copy
-          in
-          let new_distance =
-            OptimizedArray.get new_distances
-              (calculate_index cols goal_row goal_col)
-          in
-
-          (* If improvement found, add to list *)
-          if new_distance <> max_int && new_distance < original_distance then (
-            let improvement = original_distance - new_distance in
-            Mutex.lock mutex;
-            Atomic.set improvement_list
-              (improvement :: Atomic.get improvement_list);
-            Mutex.unlock mutex)));
-
-  (* Tear down pool *)
-  Task.teardown_pool pool;
-
-  (* Count frequency of each improvement value *)
-  let module IntMap = Map.Make (Int) in
-  let frequency_map =
-    List.fold_left
-      (fun acc improvement ->
-        let count = try IntMap.find improvement acc with Not_found -> 0 in
-        IntMap.add improvement (count + 1) acc)
-      IntMap.empty
-      (Atomic.get improvement_list)
-  in
-
-  IntMap.bindings frequency_map |> List.sort compare
-
-(** [part2 maze] analyzes path inefficiency compared to Manhattan distance
-
-    - For each pair of reachable points in the maze, this function:
-    - 1. Calculates the Manhattan distance between them
-    - 2. Compares it with the actual path distance
-    - 3. Records positive differences (inefficiencies)
+    Rows are processed in parallel. Each row counts into its own table in
+    [row_counts], so no two workers share data and no lock is needed; the tables
+    are merged once at the end.
 
     @param maze The 2D character array representing the maze
     @return
       A list of (inefficiency_value, frequency) pairs sorted by inefficiency
       value *)
 let part2 maze =
-  let start_row, start_col = find_position maze 'S' in
-  let distances = breadth_first_search (start_row, start_col) maze in
+  let max_jump = 20 in
+  let start = find_position maze 'S' in
+  let distances = breadth_first_search start maze in
   let rows = Array.length maze in
   let cols = Array.length maze.(0) in
-
-  (* Set up parallel task pool *)
-  let num_domains = try int_of_string Sys.argv.(1) with _ -> 4 in
-  let pool = Task.setup_pool ~num_domains:(num_domains - 1) () in
-
-  (* Shared data structure for results *)
-  let inefficiency_list = Atomic.make [] in
-  let mutex = Mutex.create () in
-
-  (* Chunk the first dimension for parallel processing *)
-  Task.run pool (fun () ->
+  let distance row col =
+    OptimizedArray.get distances (calculate_index cols row col)
+  in
+  let row_counts = Array.make rows (Hashtbl.create 0) in
+  with_pool (fun pool ->
       Task.parallel_for pool ~start:0 ~finish:(rows - 1) ~body:(fun row1 ->
-          let local_inefficiencies = ref [] in
-
+          let counts = Hashtbl.create 256 in
           for col1 = 0 to cols - 1 do
-            let dist1 =
-              OptimizedArray.get distances (calculate_index cols row1 col1)
-            in
+            let dist1 = distance row1 col1 in
             if dist1 <> max_int then
-              for row2 = 0 to rows - 1 do
-                for col2 = 0 to cols - 1 do
-                  let dist2 =
-                    OptimizedArray.get distances
-                      (calculate_index cols row2 col2)
-                  in
-
-                  (* Only compare reachable points *)
-                  if dist2 <> max_int then
-                    let manhattan_dist =
-                      abs (row1 - row2) + abs (col1 - col2)
-                    in
-
-                    (* Record positive inefficiencies with Manhattan distance <= 20 *)
-                    if dist2 - dist1 >= 0 && manhattan_dist <= 20 then
-                      local_inefficiencies :=
-                        (dist2 - dist1 - manhattan_dist)
-                        :: !local_inefficiencies
+              (* The diamond of cells within max_jump of (row1, col1) *)
+              let first_row = max 0 (row1 - max_jump) in
+              let last_row = min (rows - 1) (row1 + max_jump) in
+              for row2 = first_row to last_row do
+                let reach = max_jump - abs (row1 - row2) in
+                let first_col = max 0 (col1 - reach) in
+                let last_col = min (cols - 1) (col1 + reach) in
+                for col2 = first_col to last_col do
+                  let dist2 = distance row2 col2 in
+                  if dist2 <> max_int && dist2 - dist1 >= 0 then
+                    let manhattan = abs (row1 - row2) + abs (col1 - col2) in
+                    add_count counts (dist2 - dist1 - manhattan)
                 done
               done
           done;
-
-          (* Merge local results with global list *)
-          if !local_inefficiencies <> [] then (
-            Mutex.lock mutex;
-            Atomic.set inefficiency_list
-              (!local_inefficiencies @ Atomic.get inefficiency_list);
-            Mutex.unlock mutex)));
-
-  (* Tear down pool *)
-  Task.teardown_pool pool;
-
-  (* Count frequency of each inefficiency value *)
-  let module IntMap = Map.Make (Int) in
-  let frequency_map =
-    List.fold_left
-      (fun acc inefficiency ->
-        let count = try IntMap.find inefficiency acc with Not_found -> 0 in
-        IntMap.add inefficiency (count + 1) acc)
-      IntMap.empty
-      (Atomic.get inefficiency_list)
-  in
-
-  IntMap.bindings frequency_map |> List.sort compare
+          row_counts.(row1) <- counts));
+  let totals = Hashtbl.create 256 in
+  Array.iter
+    (Hashtbl.iter (fun key count ->
+         let total = Option.value (Hashtbl.find_opt totals key) ~default:0 in
+         Hashtbl.replace totals key (total + count)))
+    row_counts;
+  sorted_counts totals
 
 (** [parse input] parses the input string into a 2D maze representation
 
