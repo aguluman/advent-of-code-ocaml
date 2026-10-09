@@ -1,7 +1,6 @@
 open OUnit2
 open Day06
 
-(* Example input *)
 let example_input =
   "....#.....\n\
    .........#\n\
@@ -17,13 +16,13 @@ let example_input =
 (* Helper function to create part1 tests *)
 let make_part1_test name expected_output input =
   name >:: fun _ ->
-  let map = parse input in
+  let map = parse input |> Result.get_ok in
   assert_equal expected_output (part1 map) ~printer:string_of_int
 
 (* Helper function to create part2 tests *)
 let make_part2_test name expected_output input =
   name >:: fun _ ->
-  let map = parse input in
+  let map = parse input |> Result.get_ok in
   assert_equal expected_output (part2 map) ~printer:string_of_int
 
 (* Part1 and Part2 test cases *)
@@ -39,25 +38,23 @@ let () = run_test_tt_main suite
 
 (** Main entry point *)
 let () =
-  let has_input =
-    try
-      let _ = Unix.select [ Unix.stdin ] [] [] 0.0 in
-      true
-    with Unix.Unix_error _ -> false
-  in
+  let has_input = not (Unix.isatty Unix.stdin) in
 
   if has_input then
     let input = In_channel.input_all In_channel.stdin |> String.trim in
-    if String.length input > 0 then (
+    if String.length input > 0 then
       let start_time = Unix.gettimeofday () in
 
-      let map = parse input in
+      match parse input with
+      | Error reason ->
+          prerr_endline ("Invalid input: " ^ reason);
+          exit 1
+      | Ok map ->
+          let part1_result = part1 map in
+          Printf.printf "Part 1: %d\n" part1_result;
 
-      let part1_result = part1 map in
-      Printf.printf "Part 1: %d\n" part1_result;
+          let part2_result = part2 map in
+          Printf.printf "Part 2: %d\n" part2_result;
 
-      let part2_result = part2 map in
-      Printf.printf "Part 2: %d\n" part2_result;
-
-      let end_time = Unix.gettimeofday () in
-      Printf.printf "Elapsed time: %f seconds\n" (end_time -. start_time))
+          let end_time = Unix.gettimeofday () in
+          Printf.printf "Elapsed time: %f seconds\n" (end_time -. start_time)
