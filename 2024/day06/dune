@@ -1,3 +1,8 @@
 (executable
  (name test)
  (libraries ounit2 unix))
+
+(rule
+ (alias runtest)
+ (action
+  (run ./test.exe)))

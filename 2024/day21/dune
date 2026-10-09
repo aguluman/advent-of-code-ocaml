@@ -1,6 +1,6 @@
 (executable
  (name test)
- (libraries ounit2 str domainslib unix))
+ (libraries ounit2 str unix))
 
 (rule
  (alias runtest)

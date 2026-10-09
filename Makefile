@@ -1,4 +1,4 @@
-.PHONY: all help test fmt fmt-check clean new-day run-day run-release run-current \
+.PHONY: all help test fmt fmt-check clean build new-day run-day run-release run-current \
 	download check-status submit run-submit flake flake-build flake-run flake-update
 
 # Recipes use bash features.
@@ -294,6 +294,17 @@ clean:
 		(cd $$day && dune clean); \
 	done
 	@echo "✅ All build artifacts cleaned successfully!"
+
+
+# Build all artifacts
+build:
+	@echo "Running dune build for all artifacts..."
+	@for day in $(DAYS); do \
+		echo "Building $$day..."; \
+		(cd $$day && dune build); \
+	done
+	@echo "✅ All build artifacts built successfully!"
+
 
 # Create a new day from template
 new-day:
@@ -610,6 +621,7 @@ help:
 	@echo "  fmt-check-XX    : Check formatting for a specific day (e.g., fmt-check-01)"
 	@echo "  benchmark-XX    : Benchmark the release binary for a day (e.g., benchmark-09)"
 	@echo "  clean           : Clean all build artifacts"
+	@echo "  build           : Build all artifacts in the current year."
 	@echo "  new-day         : Create a new day from template (interactive)"
 	@echo "  run-day         : Run a specific day with input and save answers"
 	@echo "  run-release     : Build and run a specific day in release mode and save answers"

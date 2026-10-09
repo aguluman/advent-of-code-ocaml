@@ -51,10 +51,12 @@ let () =
     if String.length input > 0 then (
       let start_time = Unix.gettimeofday () in
 
-      let part1_result = part1 input in
+      let map = parse input in
+
+      let part1_result = part1 map in
       Printf.printf "Part 1: %d\n" part1_result;
 
-      let part2_result = part2 input in
+      let part2_result = part2 map in
       Printf.printf "Part 2: %d\n" part2_result;
 
       let end_time = Unix.gettimeofday () in
