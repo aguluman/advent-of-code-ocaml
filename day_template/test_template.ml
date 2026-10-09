@@ -32,12 +32,7 @@ let () = run_test_tt_main suite
     with timing *)
 let () =
   try
-    let has_input =
-      try
-        let _ = Unix.select [ Unix.stdin ] [] [] 0.0 in
-        true
-      with Unix.Unix_error _ -> false
-    in
+    let has_input = not (Unix.isatty Unix.stdin) in
 
     if has_input then
       let input = In_channel.input_all In_channel.stdin |> String.trim in
